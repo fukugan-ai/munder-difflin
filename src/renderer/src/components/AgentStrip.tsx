@@ -183,11 +183,11 @@ export function AgentStrip({ config }: AgentStripProps) {
                     <span style={{
                       fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                       color: 'var(--cth-ink-500)'
-                    }}>PRIVATE NOTE · {a.name.toUpperCase()}</span>
+                    }}>非公開メモ · {a.name.toUpperCase()}</span>
                     <button
                       onClick={() => setNoteEditId(null)}
-                      title="Done"
-                      aria-label="Close note editor"
+                      title="完了"
+                      aria-label="メモ編集を閉じる"
                       style={{
                         flexShrink: 0, width: 18, height: 18, padding: 0, lineHeight: 1,
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -206,8 +206,8 @@ export function AgentStrip({ config }: AgentStripProps) {
                     value={a.note ?? ''}
                     onChange={(e) => setAgentNote(a.id, e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Escape') setNoteEditId(null); }}
-                    placeholder="one line per bullet…"
-                    aria-label={`Note for ${a.name}`}
+                    placeholder="1行につき1項目…"
+                    aria-label={`${a.name}のメモ`}
                     style={{
                       width: '100%', padding: '6px 8px',
                       border: 'none', outline: 'none', resize: 'none', boxSizing: 'border-box',
@@ -218,7 +218,7 @@ export function AgentStrip({ config }: AgentStripProps) {
                     }}
                   />
                   <span style={{ fontSize: 10, color: 'var(--cth-ink-500)' }}>
-                    one line = one bullet · esc to close
+                    1行＝1項目 · Escで閉じる
                   </span>
                 </div>
               </>
@@ -233,7 +233,7 @@ export function AgentStrip({ config }: AgentStripProps) {
         onClick={() => setAddAgentOpen(true)}
       >
         <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', whiteSpace: 'nowrap' }}>
-          <Icon name="plus" /> add agent
+          <Icon name="plus" /> エージェントを追加
         </span>
       </PixelButton>
       {/* ONE restore control, pinned to the strip's right edge. Busy (manual OR
@@ -257,7 +257,7 @@ export function AgentStrip({ config }: AgentStripProps) {
           >
             <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', whiteSpace: 'nowrap' }}>
               <Icon name="play" />
-              {restoreBusy ? 'restoring your team…' : `restore team (${restorableAgents.length}) ▴`}
+              {restoreBusy ? 'チームを復元中…' : `チームを復元 (${restorableAgents.length}) ▴`}
             </span>
           </PixelButton>
         </span>

@@ -125,7 +125,7 @@ export function ThreadsPanel({ agentId }: ThreadsPanelProps) {
                           color: 'var(--cth-ink-900)'
                         }}>{m.act}</span>
                         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--cth-ink-500)' }}>
-                          {new Date(m.created_at).toLocaleString()}
+                          {new Date(m.created_at).toLocaleString('ja-JP')}
                         </span>
                       </div>
                       <div style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 13, lineHeight: '18px', color: 'var(--cth-ink-700)', marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>

@@ -293,7 +293,7 @@ export function App() {
           fontSize: 13,
           color: 'var(--cth-ink-500)'
         }}>
-          {config.autoMode ? 'auto mode on' : 'auto mode off'}
+          {config.autoMode ? '自動モード：オン' : '自動モード：オフ'}
         </span>
         {/* v0.3.4: theme + fullscreen live HERE (top right), not buried in the
             terminal header — and the theme darkens the whole app, terminals
@@ -315,8 +315,8 @@ export function App() {
             // harness agents — the user's global Claude theme is never touched.
             void window.cth.updateConfig({ terminalTheme: next });
           }}
-          data-tip={appThemeNow === 'dark' ? 'Light theme' : 'Dark theme'}
-          aria-label="Toggle dark mode"
+          data-tip={appThemeNow === 'dark' ? 'ライトテーマ' : 'ダークテーマ'}
+          aria-label="テーマを切り替える"
           style={{
             marginLeft: 'auto',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -334,8 +334,8 @@ export function App() {
         <button
           className="cth-titlebar-nodrag cth-settings-btn cth-tip"
           onClick={() => { setSettingsSection(undefined); setSettingsOpen(true); }}
-          data-tip="Settings"
-          aria-label="Settings"
+          data-tip="設定"
+          aria-label="設定"
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             width: 28, height: 28, padding: 0,
@@ -361,8 +361,8 @@ export function App() {
               ?? all.find((x) => x.ptyId);
             if (target) useStore.getState().setFullscreen(target.id);
           }}
-          data-tip={fullscreenAgentId ? 'Exit focus mode (Esc)' : 'Focus mode'}
-          aria-label="Toggle focus mode"
+          data-tip={fullscreenAgentId ? '集中モードを終了（Esc）' : '集中モード'}
+          aria-label="集中モードを切り替える"
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             width: 28, height: 28, padding: 0,
@@ -394,14 +394,14 @@ export function App() {
               pointerEvents: 'none'
             }}>
               <div style={{ pointerEvents: 'auto', width: 360 }}>
-                <PixelPanel variant="dialog" title="EMPTY FLOOR" noPadding>
+                <PixelPanel variant="dialog" title="エージェントがいません" noPadding>
                   <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <p style={{ margin: 0, fontSize: 13, lineHeight: '20px' }}>
-                      No agents on the floor yet. Spawn one to see real claude output stream in here.
+                      まだエージェントがいません。追加すると、ここにAIの出力がリアルタイムで表示されます。
                     </p>
                     <PixelButton variant="primary" size="md" onClick={() => setAddAgentOpen(true)}>
                       <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                        <Icon name="plus" /> add agent
+                        <Icon name="plus" /> エージェントを追加
                       </span>
                     </PixelButton>
                   </div>
@@ -432,10 +432,10 @@ export function App() {
               <div style={{
                 fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px',
                 color: 'var(--cth-ink-500)'
-              }}>WAKING THE FLOOR</div>
+              }}>チームを起動中</div>
               <p style={{ margin: 0, fontSize: 13, textAlign: 'center', color: 'var(--cth-ink-700)' }}>
-                Michael is clocking in.<br />
-                The terminal will land here once he's seated.
+                Michaelが準備しています。<br />
+                起動すると、ここにターミナルが表示されます。
               </p>
             </PixelPanel>
           ) : (
@@ -447,14 +447,14 @@ export function App() {
               <div style={{
                 fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px',
                 color: 'var(--cth-ink-500)'
-              }}>NO AGENT SELECTED</div>
+              }}>エージェントが選択されていません</div>
               <p style={{ margin: 0, fontSize: 13, textAlign: 'center', color: 'var(--cth-ink-700)' }}>
-                Spawn an agent from the strip below.<br />
-                The terminal and command bar will land here.
+                下の一覧からエージェントを追加してください。<br />
+                ここにターミナルとコマンドバーが表示されます。
               </p>
               <PixelButton variant="secondary" size="md" onClick={() => setAddAgentOpen(true)}>
                 <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                  <Icon name="plus" /> add agent
+                  <Icon name="plus" /> エージェントを追加
                 </span>
               </PixelButton>
             </PixelPanel>

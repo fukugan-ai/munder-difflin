@@ -2,7 +2,7 @@
   "name": "munder-difflin",
   "version": "0.4.5",
   "private": true,
-  "description": "Clones for you and your team, working 24/7 — a free, local-first multi-agent harness that turns the CLI coding agent you already run into a clone of you, coordinating an office of agents on your machine.",
+  "description": "あなたとチームの分身が24時間働く、無料・ローカルファーストのマルチエージェント基盤。普段使っているCLIコーディングエージェントが、PC上のエージェントチームをまとめます。",
   "main": "out/main/index.js",
   "author": "Chaitanya Giri",
   "homepage": "https://munderdiffl.in/",

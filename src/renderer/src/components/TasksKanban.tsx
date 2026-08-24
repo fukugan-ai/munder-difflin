@@ -335,7 +335,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
                 : <span style={{ fontSize: 11, color: 'var(--cth-ink-300)' }}>unassigned</span>}
               <PriorityDots level={Math.max(1, Math.min(5, task.priority))} />
               <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-display)' }}>
-                {isNaN(created.getTime()) ? '' : created.toLocaleString()}
+                {isNaN(created.getTime()) ? '' : created.toLocaleString('ja-JP')}
               </span>
             </div>
 

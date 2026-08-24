@@ -60,9 +60,9 @@ export function engineBlocksOnboarding(a: EngineAvailability): boolean {
 /** One short line for the badge on each engine row. */
 export function engineAvailabilityBadge(a: EngineAvailability): string | null {
   switch (a.state) {
-    case 'installed': return 'INSTALLED';
-    case 'installs-on-first-run': return 'INSTALLS ON FIRST RUN';
-    case 'not-installable': return 'NOT INSTALLED';
+    case 'installed': return 'インストール済み';
+    case 'installs-on-first-run': return '初回起動時に導入';
+    case 'not-installable': return '未インストール';
     default: return null;
   }
 }
@@ -72,7 +72,7 @@ export function engineAvailabilityBadge(a: EngineAvailability): string | null {
  *  then what to do next. */
 export function engineAvailabilityMessage(a: EngineAvailability, label: string): string | null {
   if (a.state !== 'not-installable') return null;
-  return `${label} is not installed on this computer and the app has no installer for it, ` +
-    `so Michael could not start. Install it first, then press "check again". ` +
-    `Or pick Claude Code, which installs itself on first run.`;
+  return `${label} はこのPCにインストールされておらず、アプリから自動導入もできないため、` +
+    `Michaelを起動できません。先にインストールしてから「もう一度確認」を押してください。` +
+    `または、初回起動時に自動導入されるClaude Codeを選んでください。`;
 }
