@@ -214,8 +214,8 @@ If `node-pty` fails to load after an Electron upgrade, re-run `npm install`.
 ## Dioxus Web preview
 
 The `feat/dioxus-web` branch contains the first slice of a local single-user Web app for headless WSL.
-Its default bind address is `127.0.0.1:8080` inside WSL.
-Once running, it opens from the Windows browser at `http://localhost:8080` without launching the Electron UI or requiring an X server.
+Its default bind address is `127.0.0.1:5080` inside WSL.
+Once running, it opens from the Windows browser at `http://localhost:5080` without launching the Electron UI or requiring an X server.
 
 This preview uses [Dioxus](https://dioxuslabs.com/) 0.7.10 with Rust and WebAssembly.
 It requires Rust and Cargo 1.98 plus the `wasm32-unknown-unknown` target.
@@ -236,7 +236,7 @@ This command has been verified to build and start the fullstack server and clien
 Open this URL in the Windows browser:
 
 ```text
-http://localhost:8080
+http://localhost:5080
 ```
 
 The current migration slice provides only the Japanese dashboard and Web server/PostgreSQL status.
@@ -247,6 +247,109 @@ Only the server process started by `npm run dev:web` reads the PostgreSQL `MD_PG
 Do not pass those credentials to WASM or the browser.
 If configuration is missing, the Web app starts in degraded mode and reports durable writes as disabled (`writes: false`).
 The dashboard and status view remain available in that state.
+
+### Open the preview from another PC on the LAN
+
+Use the LAN command to listen on every IPv4 interface when another computer on the same LAN needs access.
+The regular `npm run dev:web` command continues to listen only on `127.0.0.1`.
+
+```bash
+npm run dev:web:lan
+```
+
+```text
+Browser on another PC
+        ↓
+Windows LAN IP:5080
+        ↓
+Windows 11 mirrored networking, or a NAT port proxy
+        ↓
+WSL 0.0.0.0:5080
+```
+
+Mirrored networking is the shorter route on Windows 11 22H2 or later.
+Use a port proxy if you want to keep the default NAT mode.
+Both procedures follow [Microsoft's WSL networking guidance](https://learn.microsoft.com/windows/wsl/networking).
+
+#### A. Mirrored networking on Windows 11 22H2 or later
+
+1. Add this setting to `%UserProfile%\.wslconfig` on Windows.
+
+   ```ini
+   [wsl2]
+   networkingMode=mirrored
+   ```
+
+2. Shut down WSL from PowerShell, then start it again.
+
+   ```powershell
+   wsl --shutdown
+   ```
+
+3. Start the LAN server from the repository root in WSL.
+
+   ```bash
+   npm run dev:web:lan
+   ```
+
+4. In an elevated PowerShell window, add an inbound TCP 5080 rule to the Hyper-V firewall used by WSL.
+
+   ```powershell
+   New-NetFirewallHyperVRule -Name "MunderDifflinWeb5080" -DisplayName "Munder Difflin Web 5080" -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol TCP -LocalPorts 5080
+   ```
+
+5. Open `http://<Windows-LAN-IP>:5080` from the other PC.
+   Use `ipconfig` to find the Windows LAN address.
+
+To remove the Hyper-V firewall rule, run this command in an elevated PowerShell window:
+
+```powershell
+Remove-NetFirewallHyperVRule -Name "MunderDifflinWeb5080"
+```
+
+To disable mirrored networking itself, remove `networkingMode=mirrored` from `.wslconfig` and run `wsl --shutdown`.
+
+#### B. Default NAT with a port proxy
+
+1. Start the LAN server from the repository root in WSL.
+
+   ```bash
+   npm run dev:web:lan
+   ```
+
+2. Find the WSL IPv4 address from PowerShell.
+   The `hostname` option is an uppercase `-I`.
+
+   ```powershell
+   wsl hostname -I
+   ```
+
+3. In an elevated PowerShell window, forward Windows TCP 5080 to WSL.
+   Replace `<WSL-IP>` with the WSL IPv4 address from the previous command.
+
+   ```powershell
+   netsh interface portproxy add v4tov4 listenport=5080 listenaddress=0.0.0.0 connectport=5080 connectaddress=<WSL-IP>
+   ```
+
+4. In the same window, add a Windows firewall rule for inbound TCP 5080 on Private networks.
+
+   ```powershell
+   New-NetFirewallRule -Name "MunderDifflinWeb5080" -DisplayName "Munder Difflin Web 5080" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5080 -Profile Private
+   ```
+
+5. Open `http://<Windows-LAN-IP>:5080` from the other PC.
+
+The WSL IP address can change after WSL restarts.
+If it changes, remove the current port proxy and add it again with the new `connectaddress`.
+
+```powershell
+netsh interface portproxy delete v4tov4 listenport=5080 listenaddress=0.0.0.0
+Remove-NetFirewallRule -Name "MunderDifflinWeb5080"
+```
+
+The LAN command exposes the Web preview to the LAN without authentication.
+Only the dashboard and status view are exposed today, but the impact becomes much greater if agent, PTY, or file operations are later ported and exposed the same way.
+Use it only on a trusted Private network, and remove the firewall rules and port proxy when they are no longer needed.
 
 ### Prepare PostgreSQL
 

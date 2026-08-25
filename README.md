@@ -149,8 +149,8 @@ Electronの更新後に`node-pty`を読み込めない場合は、`npm install`�
 ## Dioxus Web版のプレビュー
 
 `feat/dioxus-web`ブランチには、headless WSLで使うローカル単独利用向けWeb版の最初のスライスがあります。
-既定の待受先はWSL内の`127.0.0.1:8080`です。
-起動できれば、Windowsのブラウザーから`http://localhost:8080`を開けるため、Electronの画面とXサーバーは不要です。
+既定の待受先はWSL内の`127.0.0.1:5080`です。
+起動できれば、Windowsのブラウザーから`http://localhost:5080`を開けるため、Electronの画面とXサーバーは不要です。
 
 このプレビューはRustとWebAssemblyで動く[Dioxus](https://dioxuslabs.com/) 0.7.10を使います。
 RustとCargo 1.98、および`wasm32-unknown-unknown` targetが必要です。
@@ -171,7 +171,7 @@ npm run dev:web
 Windowsのブラウザーで次のURLを開きます。
 
 ```text
-http://localhost:8080
+http://localhost:5080
 ```
 
 現在の移植スライスで使えるのは、日本語のdashboardとWebサーバーおよびPostgreSQLの状態表示です。
@@ -182,6 +182,109 @@ PostgreSQLの`MD_PG_*`環境変数は、`npm run dev:web`が起動するserver p
 WASMとブラウザーへ認証情報を渡さないでください。
 設定が不足している場合、Web版はdegraded状態で起動し、永続化writeは無効（`writes: false`）として表示されます。
 この状態でもdashboardとstatusは確認できます。
+
+### 別のPCからLANで開く
+
+同じLANにある別のPCから開く場合は、全IPv4 interfaceで待ち受けるLAN用commandを使います。
+通常の`npm run dev:web`は、これまでどおり`127.0.0.1`だけで待ち受けます。
+
+```bash
+npm run dev:web:lan
+```
+
+```text
+別のPCのブラウザー
+        ↓
+WindowsのLAN IP:5080
+        ↓
+Windows 11のmirrored networking、またはNATのportproxy
+        ↓
+WSLの0.0.0.0:5080
+```
+
+Windows 11 22H2以降では、mirrored networkingを使う方法が短い経路です。
+既定のNATを維持する場合は、portproxyを設定します。
+どちらも[MicrosoftのWSL networking手順](https://learn.microsoft.com/windows/wsl/networking)に沿っています。
+
+#### A. Windows 11 22H2以降のmirrored networking
+
+1. Windows側の`%UserProfile%\.wslconfig`へ次の設定を追加します。
+
+   ```ini
+   [wsl2]
+   networkingMode=mirrored
+   ```
+
+2. PowerShellでWSLを停止し、もう一度起動します。
+
+   ```powershell
+   wsl --shutdown
+   ```
+
+3. WSLのrepository rootでLAN用serverを起動します。
+
+   ```bash
+   npm run dev:web:lan
+   ```
+
+4. 管理者権限のPowerShellで、WSL用Hyper-V firewallへTCP 5080の受信ruleを追加します。
+
+   ```powershell
+   New-NetFirewallHyperVRule -Name "MunderDifflinWeb5080" -DisplayName "Munder Difflin Web 5080" -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol TCP -LocalPorts 5080
+   ```
+
+5. 別のPCから`http://<Windows-LAN-IP>:5080`を開きます。
+   WindowsのLAN IPは`ipconfig`で確認できます。
+
+Hyper-V firewall ruleを戻す場合は、管理者権限のPowerShellで次を実行します。
+
+```powershell
+Remove-NetFirewallHyperVRule -Name "MunderDifflinWeb5080"
+```
+
+mirrored networking自体を戻す場合は、`.wslconfig`から`networkingMode=mirrored`を削除し、`wsl --shutdown`を実行します。
+
+#### B. 既定のNATとportproxy
+
+1. WSLのrepository rootでLAN用serverを起動します。
+
+   ```bash
+   npm run dev:web:lan
+   ```
+
+2. PowerShellでWSLのIPv4 addressを確認します。
+   `hostname`のoptionは大文字の`-I`です。
+
+   ```powershell
+   wsl hostname -I
+   ```
+
+3. 管理者権限のPowerShellで、WindowsのTCP 5080からWSLへportproxyを追加します。
+   `<WSL-IP>`は前のcommandで確認したWSLのIPv4 addressへ置き換えます。
+
+   ```powershell
+   netsh interface portproxy add v4tov4 listenport=5080 listenaddress=0.0.0.0 connectport=5080 connectaddress=<WSL-IP>
+   ```
+
+4. 同じPowerShellで、Private networkからTCP 5080を受けるWindows firewall ruleを追加します。
+
+   ```powershell
+   New-NetFirewallRule -Name "MunderDifflinWeb5080" -DisplayName "Munder Difflin Web 5080" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5080 -Profile Private
+   ```
+
+5. 別のPCから`http://<Windows-LAN-IP>:5080`を開きます。
+
+WSLを再起動するとWSL IPが変わる場合があります。
+その場合は、現在のportproxyを削除して、新しい`connectaddress`で追加し直します。
+
+```powershell
+netsh interface portproxy delete v4tov4 listenport=5080 listenaddress=0.0.0.0
+Remove-NetFirewallRule -Name "MunderDifflinWeb5080"
+```
+
+LAN用commandは認証なしでWeb版をLANへ公開します。
+現在公開されるのはdashboardとstatusだけですが、将来agent、PTY、file操作を移植した状態で同じ公開方法を使うと影響が大きくなります。
+信頼できるPrivate networkでだけ使い、不要になったfirewall ruleとportproxyは削除してください。
 
 ### PostgreSQLの準備
 

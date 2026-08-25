@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const baseUrl = process.env.MD_WEB_BASE_URL ?? "http://127.0.0.1:8080";
+const baseUrl = process.env.MD_WEB_BASE_URL ?? "http://127.0.0.1:5080";
 
 function collectPageErrors(page: Page) {
   const errors: string[] = [];

@@ -15,7 +15,8 @@
   },
   "scripts": {
     "dev": "electron-vite dev",
-    "dev:web": "cd web && ../.task-tools/dioxus/bin/dx serve --web --fullstack true -p md-web-app --addr 127.0.0.1 --port 8080 --open false --cargo-args=--locked",
+    "dev:web": "cd web && ../.task-tools/dioxus/bin/dx serve --web --fullstack true -p md-web-app --addr 127.0.0.1 --port 5080 --open false --cargo-args=--locked",
+    "dev:web:lan": "cd web && ../.task-tools/dioxus/bin/dx serve --web --fullstack true -p md-web-app --addr 0.0.0.0 --port 5080 --open false --cargo-args=--locked",
     "build": "electron-vite build && npm run copy:main-assets",
     "copy:main-assets": "node tools/copy-main-assets.cjs",
     "preview": "electron-vite preview",
