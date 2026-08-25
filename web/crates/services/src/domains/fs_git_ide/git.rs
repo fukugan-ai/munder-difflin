@@ -267,7 +267,7 @@ impl GitService {
             return Err(DomainError::BusyWorktree);
         }
         validate_revision(&request.reference)?;
-        let root = registry.resolve(&request.workspace_id)?;
+        let root = registry.resolve_mutable(&request.workspace_id)?;
         let current = status(root)?;
         if !current.staged.is_empty()
             || !current.unstaged.is_empty()

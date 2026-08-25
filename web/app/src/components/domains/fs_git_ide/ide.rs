@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use md_web_contracts::domains::fs_git_ide::{
-    BinaryFile, CiRun, DirEntry, GitDiff, GitHubIssue, GitOverview, WorkspaceId, WorkspaceSummary,
-    WriteFileRequest,
+    BinaryFile, CiRun, DirEntry, GitDiff, GitHubIssue, GitOverview, WorkspaceCapability,
+    WorkspaceId, WorkspaceSummary, WriteFileRequest,
 };
 
 use super::api;
@@ -84,6 +84,11 @@ pub(crate) fn FsGitIde(#[props(default)] initial_workspace_path: Option<String>)
         .as_ref()
         .map(ToString::to_string)
         .unwrap_or_default();
+    let mutable_workspace = selected
+        .read()
+        .as_ref()
+        .and_then(|id| workspace_rows.iter().find(|workspace| workspace.id == *id))
+        .is_some_and(|workspace| workspace.capability == WorkspaceCapability::PrivateMutable);
     let active_name = active_file
         .read()
         .as_ref()
@@ -139,6 +144,12 @@ pub(crate) fn FsGitIde(#[props(default)] initial_workspace_path: Option<String>)
     };
 
     let save_file = move |_| {
+        if !mutable_workspace {
+            notice.set(Some(String::from(
+                "登録元は参照専用です。Agent用private workspaceを選択してください。",
+            )));
+            return;
+        }
         let Some(workspace_id) = selected.read().clone() else {
             return;
         };
@@ -217,7 +228,13 @@ pub(crate) fn FsGitIde(#[props(default)] initial_workspace_path: Option<String>)
             header { class: "md-ide__header",
                 div {
                     h2 { id: "md-ide-title", "IDE" }
-                    p { "管理対象のローカルworkspaceだけを編集します" }
+                    p {
+                        if mutable_workspace {
+                            "Agent用private workspaceを編集しています"
+                        } else {
+                            "登録元は参照専用です。編集にはAgent用private workspaceを選択してください"
+                        }
+                    }
                 }
                 label { class: "md-ide__workspace",
                     span { "ワークスペース" }
@@ -236,7 +253,14 @@ pub(crate) fn FsGitIde(#[props(default)] initial_workspace_path: Option<String>)
                             option { value: "", "登録済みworkspaceなし" }
                         }
                         for workspace in workspace_rows {
-                            option { key: "{workspace.id}", value: workspace.id.to_string(), "{workspace.name}" }
+                            option {
+                                key: "{workspace.id}", value: workspace.id.to_string(),
+                                if workspace.capability == WorkspaceCapability::PrivateMutable {
+                                    "{workspace.name}（private）"
+                                } else {
+                                    "{workspace.name}（参照専用）"
+                                }
+                            }
                         }
                     }
                 }
@@ -278,8 +302,12 @@ pub(crate) fn FsGitIde(#[props(default)] initial_workspace_path: Option<String>)
                                 key: "{path}",
                                 value: content.read().clone(),
                                 language: language_for_path(path),
-                                read_only: false,
-                                save_state: save_state.read().clone(),
+                                read_only: !mutable_workspace,
+                                save_state: if mutable_workspace {
+                                    save_state.read().clone()
+                                } else {
+                                    String::from("参照専用")
+                                },
                                 on_change: move |value| {
                                     content.set(value);
                                     save_state.set(if *content.read() == *original.read() {
@@ -300,6 +328,7 @@ pub(crate) fn FsGitIde(#[props(default)] initial_workspace_path: Option<String>)
                 }
                 GitPanel {
                     workspace_id: selected.read().clone(),
+                    mutable_workspace,
                     overview: git_snapshot,
                     issues: issues.read().clone(),
                     ci_runs: ci_runs.read().clone(),
@@ -399,7 +428,9 @@ fn path_is_within(path: &str, root: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use md_web_contracts::domains::fs_git_ide::{WorkspaceId, WorkspaceSummary};
+    use md_web_contracts::domains::fs_git_ide::{
+        WorkspaceCapability, WorkspaceId, WorkspaceSummary,
+    };
 
     use super::{is_image_path, join_rel, language_for_path, parent_rel, workspace_for_path};
 
@@ -431,11 +462,13 @@ mod tests {
                 id: WorkspaceId(String::from("main")),
                 name: String::from("main"),
                 display_path: String::from("/srv/repo"),
+                capability: WorkspaceCapability::SourceReadOnly,
             },
             WorkspaceSummary {
                 id: WorkspaceId(String::from("worktree")),
                 name: String::from("worktree"),
                 display_path: String::from("/srv/repo-worktrees/task"),
+                capability: WorkspaceCapability::PrivateMutable,
             },
         ];
 

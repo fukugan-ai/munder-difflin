@@ -192,6 +192,7 @@ mod tests {
             action_ja: String::from("待機中"),
             pty_id: Some(format!("pty-{id}")),
             worktree_path: Some(String::from("/repo-worktree")),
+            workspace_capability: None,
             session_id: Some(String::from("session-1")),
             archived: false,
         }

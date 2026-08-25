@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::domains::fs_git_ide::PrivateWorkspaceCapability;
+
 /// Supported local coding-agent command providers.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -57,6 +59,8 @@ pub struct AgentRecord {
     pub action_ja: String,
     pub pty_id: Option<String>,
     pub worktree_path: Option<String>,
+    #[serde(default)]
+    pub workspace_capability: Option<PrivateWorkspaceCapability>,
     pub session_id: Option<String>,
     pub archived: bool,
 }

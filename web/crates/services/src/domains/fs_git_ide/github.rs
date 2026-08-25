@@ -179,7 +179,9 @@ fn json_names(row: &serde_json::Value, field: &str, name_field: &str) -> Vec<Str
 
 #[cfg(test)]
 mod tests {
-    use md_web_contracts::domains::fs_git_ide::{WorkspaceId, WorkspaceSummary};
+    use md_web_contracts::domains::fs_git_ide::{
+        WorkspaceCapability, WorkspaceId, WorkspaceSummary,
+    };
 
     use super::{
         GitHubService, ci_args, issue_args, parse_allowed_repo, parse_ci_runs, parse_issues,
@@ -252,6 +254,7 @@ mod tests {
             id: WorkspaceId(String::from("workspace-1")),
             name: String::from("repo"),
             display_path: String::from("/repo"),
+            capability: WorkspaceCapability::SourceReadOnly,
         };
         assert_eq!(summary.name, "repo");
     }

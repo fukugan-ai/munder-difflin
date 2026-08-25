@@ -137,7 +137,7 @@ impl FsService {
         if byte_count > MAX_TEXT_BYTES {
             return Err(DomainError::FileTooLarge);
         }
-        let root = registry.resolve(&request.workspace_id)?;
+        let root = registry.resolve_mutable(&request.workspace_id)?;
         let path = secure_write_path(root, &request.rel_path)?;
         let mut options = OpenOptions::new();
         options.write(true).create(true).truncate(true);
@@ -280,34 +280,55 @@ mod tests {
     use std::fs;
     use std::path::PathBuf;
 
-    use md_web_contracts::domains::fs_git_ide::{WorkspaceId, WriteFileRequest};
+    use md_web_contracts::domains::fs_git_ide::{
+        PrivateWorkspaceCapability, WorkspaceId, WriteFileRequest,
+    };
 
     use super::{FsService, WorkspaceRegistry};
+    use crate::domains::fs_git_ide::PrivateWorkspaceRoot;
 
     fn workspace(
         name: &str,
-    ) -> Result<(PathBuf, WorkspaceRegistry, WorkspaceId), Box<dyn std::error::Error>> {
-        let root =
+    ) -> Result<(PathBuf, PathBuf, WorkspaceRegistry, WorkspaceId), Box<dyn std::error::Error>>
+    {
+        let base =
             std::env::temp_dir().join(format!("md-fs-service-{name}-{}", std::process::id()));
-        if root.exists() {
-            fs::remove_dir_all(&root)?;
+        if base.exists() {
+            fs::remove_dir_all(&base)?;
         }
+        let authority = PrivateWorkspaceRoot::new(base.join("owned"))?;
+        let root = authority.path().join("wt-test");
         fs::create_dir_all(&root)?;
-        let registry = WorkspaceRegistry::from_paths([root.clone()]);
-        Ok((root, registry, WorkspaceId(String::from("workspace-1"))))
+        let source = base.join("source");
+        fs::create_dir_all(&source)?;
+        let registry = WorkspaceRegistry::from_paths([source]).with_private_workspaces(
+            &authority,
+            [PrivateWorkspaceCapability {
+                id: String::from("wt-test"),
+                workspace_id: WorkspaceId(String::from("private-wt-test")),
+                source_workspace_id: WorkspaceId(String::from("source-1")),
+                path: root.to_string_lossy().into_owned(),
+            }],
+        );
+        Ok((
+            base,
+            root,
+            registry,
+            WorkspaceId(String::from("private-wt-test")),
+        ))
     }
 
     #[test]
     fn traversal_is_rejected() -> Result<(), Box<dyn std::error::Error>> {
-        let (root, registry, id) = workspace("traversal")?;
+        let (base, _root, registry, id) = workspace("traversal")?;
         assert!(FsService::read_text(&registry, &id, "../outside").is_err());
-        fs::remove_dir_all(root)?;
+        fs::remove_dir_all(base)?;
         Ok(())
     }
 
     #[test]
     fn text_round_trip_stays_inside_root() -> Result<(), Box<dyn std::error::Error>> {
-        let (root, registry, id) = workspace("round-trip")?;
+        let (base, _root, registry, id) = workspace("round-trip")?;
         let request = WriteFileRequest {
             workspace_id: id.clone(),
             rel_path: String::from("notes.txt"),
@@ -318,57 +339,57 @@ mod tests {
             FsService::read_text(&registry, &id, "notes.txt")?.content,
             "hello"
         );
-        fs::remove_dir_all(root)?;
+        fs::remove_dir_all(base)?;
         Ok(())
     }
 
     #[test]
     fn binary_file_is_not_text() -> Result<(), Box<dyn std::error::Error>> {
-        let (root, registry, id) = workspace("binary")?;
+        let (base, root, registry, id) = workspace("binary")?;
         fs::write(root.join("image.png"), [0_u8, 1, 2])?;
         assert!(matches!(
             FsService::read_text(&registry, &id, "image.png"),
             Err(super::DomainError::BinaryFile)
         ));
-        fs::remove_dir_all(root)?;
+        fs::remove_dir_all(base)?;
         Ok(())
     }
 
     #[test]
     fn list_directories_before_files() -> Result<(), Box<dyn std::error::Error>> {
-        let (root, registry, id) = workspace("list")?;
+        let (base, root, registry, id) = workspace("list")?;
         fs::write(root.join("a.txt"), "a")?;
         fs::create_dir(root.join("z-dir"))?;
         let entries = FsService::list_dir(&registry, &id, "")?;
         assert!(entries.first().is_some_and(|entry| entry.is_dir));
-        fs::remove_dir_all(root)?;
+        fs::remove_dir_all(base)?;
         Ok(())
     }
 
     #[test]
     fn stat_reports_missing_leaf() -> Result<(), Box<dyn std::error::Error>> {
-        let (root, registry, id) = workspace("stat")?;
+        let (base, _root, registry, id) = workspace("stat")?;
         assert!(!FsService::stat(&registry, &id, "missing.txt")?.exists);
-        fs::remove_dir_all(root)?;
+        fs::remove_dir_all(base)?;
         Ok(())
     }
 
     #[test]
     fn binary_read_preserves_mime() -> Result<(), Box<dyn std::error::Error>> {
-        let (root, registry, id) = workspace("mime")?;
+        let (base, root, registry, id) = workspace("mime")?;
         fs::write(root.join("image.PNG"), [1_u8, 2, 3])?;
         assert_eq!(
             FsService::read_binary(&registry, &id, "image.PNG")?.mime,
             "image/png"
         );
-        fs::remove_dir_all(root)?;
+        fs::remove_dir_all(base)?;
         Ok(())
     }
 
     #[test]
     fn absolute_stat_is_metadata_only_and_registry_confined()
     -> Result<(), Box<dyn std::error::Error>> {
-        let (root, registry, _) = workspace("absolute-stat")?;
+        let (base, root, registry, _) = workspace("absolute-stat")?;
         let file = root.join("inside.txt");
         fs::write(&file, "inside")?;
         let stat = FsService::stat_absolute(&registry, &file.to_string_lossy())?;
@@ -376,7 +397,7 @@ mod tests {
         assert!(
             FsService::stat_absolute(&registry, &std::env::temp_dir().to_string_lossy()).is_err()
         );
-        fs::remove_dir_all(root)?;
+        fs::remove_dir_all(base)?;
         Ok(())
     }
 }

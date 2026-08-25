@@ -99,7 +99,10 @@ async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnErro
             agent.id == member.process_id
                 && agent.name == member.display_name
                 && agent.provider == provider
-                && agent.cwd == receipt.aria.cwd
+                && agent
+                    .workspace_capability
+                    .as_ref()
+                    .is_some_and(|capability| capability.path == agent.cwd)
         });
         if !already_active {
             super::office::office_spawn(member.request(receipt, provider, project.clone())).await?;
@@ -141,7 +144,7 @@ impl TeamMember {
             character: md_web_contracts::domains::office_ui::OfficeCharacter::Michael,
             accent: md_web_contracts::domains::office_ui::Accent::Lemon,
             orchestrator: true,
-            isolate: false,
+            isolate: true,
         }
     }
 

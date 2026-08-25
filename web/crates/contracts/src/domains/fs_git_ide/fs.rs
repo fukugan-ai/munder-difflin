@@ -13,12 +13,21 @@ impl Display for WorkspaceId {
     }
 }
 
+/// Server-issued authority associated with a workspace identity.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkspaceCapability {
+    SourceReadOnly,
+    PrivateMutable,
+}
+
 /// Workspace metadata safe to show in the local browser UI.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct WorkspaceSummary {
     pub id: WorkspaceId,
     pub name: String,
     pub display_path: String,
+    pub capability: WorkspaceCapability,
 }
 
 /// One lazily-loaded directory entry.

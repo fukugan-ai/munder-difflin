@@ -6,13 +6,13 @@ mod github;
 mod ide;
 
 pub use fs::{
-    AbsoluteFileStat, BinaryFile, DirEntry, FileStat, TextFile, WorkspaceId, WorkspaceSummary,
-    WriteFileRequest, WriteFileResult,
+    AbsoluteFileStat, BinaryFile, DirEntry, FileStat, TextFile, WorkspaceCapability, WorkspaceId,
+    WorkspaceSummary, WriteFileRequest, WriteFileResult,
 };
 pub use git::{
     CheckoutRequest, CheckoutResult, GitAheadBehind, GitBranch, GitCommit, GitCompare, GitDiff,
     GitFileAtRevision, GitFileChange, GitOverview, GitStatus, GitStatusEntry, GitWorktree,
-    IsolatedWorktree, IsolatedWorktreeState, ProvisionWorktreeRequest,
+    IsolatedWorktree, IsolatedWorktreeState, PrivateWorkspaceCapability, ProvisionWorktreeRequest,
     RemoveIsolatedWorktreeResult,
 };
 pub use github::{CiRun, GitHubIssue};

@@ -17,7 +17,7 @@ test.describe('filesystem, Git and IDE domain', () => {
     await expect(ide.getByRole('button', { name: 'Issue / CIを取得' })).toBeVisible();
   });
 
-  test('exposes history and keeps checkout behind explicit confirmation', async ({ page }) => {
+  test('keeps registered sources read-only', async ({ page }) => {
     await page.goto('/workspace');
     const ide = page.locator('[data-fs-git-ide]');
     await expect(ide).toBeVisible();
@@ -27,12 +27,11 @@ test.describe('filesystem, Git and IDE domain', () => {
     await expect(ide.getByRole('heading', { name: '履歴グラフ' })).toBeVisible();
     await expect(ide.getByRole('heading', { name: '参照を比較' })).toBeVisible();
     await expect(ide.getByRole('heading', { name: 'worktrees' })).toBeVisible();
+    await expect(ide).toContainText('登録元は参照専用です');
+    await expect(ide.getByRole('textbox', { name: 'checkoutする参照' })).toBeDisabled();
+    await expect(ide.getByRole('checkbox', { name: '未保存変更がなく、Agent停止済みと確認' })).toBeDisabled();
     const checkout = ide.getByRole('button', { name: 'checkout', exact: true });
     await expect(checkout).toBeDisabled();
-    await ide.getByRole('textbox', { name: 'checkoutする参照' }).fill('main');
-    await expect(checkout).toBeDisabled();
-    await ide.getByRole('checkbox', { name: '未保存変更がなく、Agent停止済みと確認' }).check();
-    await expect(checkout).toBeEnabled();
   });
 
   test('loads the project-private Monaco runtime without a CDN', async ({ page }) => {

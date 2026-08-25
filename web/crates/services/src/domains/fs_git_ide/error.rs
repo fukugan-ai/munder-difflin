@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DomainError {
     InvalidWorkspace,
+    ReadOnlyWorkspace,
     InvalidPath,
     NotFound,
     NotRegularFile,
@@ -30,6 +31,7 @@ impl Display for DomainError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
             Self::InvalidWorkspace => "管理対象のワークスペースではありません",
+            Self::ReadOnlyWorkspace => "登録元は参照専用です。private workspaceを作成してください",
             Self::InvalidPath => "ワークスペース外のパスは利用できません",
             Self::NotFound => "ファイルが見つかりません",
             Self::NotRegularFile => "通常ファイルではありません",

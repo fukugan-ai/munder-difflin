@@ -15,7 +15,7 @@ The integration owner must keep these shared declarations:
 1. `md_web_contracts::domains::fs_git_ide` is public.
 2. `md_web_services::domains::fs_git_ide` is registered, and these are re-exported at the crate root:
    `DomainError as FsGitIdeError`, `FsService`, `GitHubService`, `GitService`,
-   `WorkspaceRegistry`, `WorktreeProvisioner`.
+   `PrivateWorkspaceRoot`, `WorkspaceRegistry`, `WorktreeProvisioner`.
 3. `md-web-services` has a direct `serde_json` dependency.
 4. `components::domains::fs_git_ide` is registered and `FsGitIde` is mounted on the workspace route.
 5. `app.css` imports `./domains/fs_git_ide.css`.
@@ -26,6 +26,13 @@ The integration owner must keep these shared declarations:
   By default it loads `PublicConfig.registered_repos` from the shared PostgreSQL persistence
   repository. A nonempty `MD_REGISTERED_REPOS` platform path-list is the only environment override.
   The browser can select an opaque `WorkspaceId`; it cannot register or submit a root/cwd.
+- `WorkspaceRegistry::from_source_paths` (and compatibility `from_paths`) creates only
+  `WorkspaceCapability::SourceReadOnly` records with `source-*` identities. Do not merge Agent cwd
+  paths into this input. Create `PrivateWorkspaceRoot` from the server-owned
+  `<harness_home>/workspaces` root and use
+  `with_private_workspaces(&authority, persisted_private_capabilities)`; only complete
+  `PrivateWorkspaceCapability` receipts receive `WorkspaceCapability::PrivateMutable` and
+  `private-*` identities. A cwd/path under the root is not sufficient authority.
 - `git`: local executable; every invocation adds `-c core.hooksPath=/dev/null` (`NUL` on Windows).
 - `gh`: optional local executable authenticated for read access to `fukugan-ai/munder-difflin`.
   Missing/unauthenticated `gh` is returned as a UI error and does not weaken the repo allowlist.
@@ -59,7 +66,9 @@ The integration owner must keep these shared declarations:
 - `GET /api/fs-git-ide/github/issues/:workspace_id`
 - `GET /api/fs-git-ide/github/ci/:workspace_id`
 
-All listed routes delegate to existing service capabilities. `git_checkout` derives `repo_busy`
+All listed routes delegate to existing service capabilities. Read/list/stat/Git history accept both
+capabilities. `write_text` and `git_checkout` reject `SourceReadOnly` before any filesystem/Git
+mutation and require `PrivateMutable`. `git_checkout` derives `repo_busy`
 from the process-lifetime PTY list and never accepts that boolean from the browser. It conservatively
 refuses when an active Agent cwd is within the selected registered root. Checkout additionally
 requires the typed request confirmation, a clean worktree and a validated local ref; it disables
@@ -71,7 +80,12 @@ bytes remain bounded by `FsService` and are encoded locally into a data URL.
 
 ## External effects
 
-- File writes are local, root-confined, create/truncate only, and capped at 2 MiB.
+- File writes are local, private-capability-confined, create/truncate only, and capped at 2 MiB.
+- Registered source paths are read-only. Provisioning a Git source uses local
+  `git clone --no-hardlinks --no-checkout`, creates/checks out the private branch inside the clone,
+  removes `origin`, and rejects symlinks. It never runs `worktree add`, `update-ref`, switch, or any
+  other metadata mutation against the source. Non-Git sources use a no-symlink copy bounded to
+  100,000 files and 2 GiB.
 - Git is local-only. No fetch, pull, push, commit, tag, or remote mutation is implemented.
 - The only GitHub commands are `gh issue list` and `gh run list`; no workflow dispatch/rerun/cancel.
 - `parse_allowed_repo` accepts only `fukugan-ai/munder-difflin` and explicitly rejects
@@ -84,17 +98,22 @@ bytes remain bounded by `FsService` and are encoded locally into a data URL.
   root, then call:
   - `create_isolated_worktree(&WorkspaceRegistry, &ProvisionWorktreeRequest)` before spawn. The
     request contains only `WorkspaceId`, a validated slug-like name, and a local base revision.
-    Use the returned `IsolatedWorktree.path` as the PTY cwd and persist its opaque `id` beside the
-    agent recipe.
+    The request `workspace_id` must select a `SourceReadOnly` record. Use returned
+    `IsolatedWorktree.capability.path` as PTY cwd and persist the complete nested capability;
+    `source_workspace_id` retains provenance, `workspace_id` is the `private-*` mutable identity,
+    and `id` is the provisioner receipt. Persisting only cwd/path is intentionally insufficient.
+  - Build workspace registries for IDE/team/PTY as
+    `WorkspaceRegistry::from_source_paths(config.registered_repos).with_private_workspaces(
+    &provisioner.private_root(), active_and_preserved_private_capabilities)`.
   - `archive(id)` when agent state must be preserved. This performs no Git or filesystem mutation
     and makes later removal through this issuer fail closed.
   - `remove_isolated_worktree(&WorkspaceRegistry, id)` only after the PTY has stopped. It accepts
-    no raw path, refuses dirty worktrees, calls `git worktree remove` without `--force`, and
-    deliberately preserves the local branch named by the receipt.
+    no raw path and refuses dirty clones/copies. It removes only the exact app-owned private
+    directory. It performs no command against the source; `branch_preserved` is therefore false.
   - `get(id)` to resolve an active/archive record inside trusted server integration code.
   `WorktreeProvisioner::new` creates/canonicalizes only its configured root. Provision rollback
-  uses non-force `git worktree remove` plus a compare-and-delete `git update-ref` restricted to the
-  newly issued branch and its verified base SHA; no fetch/push/remote command exists.
+  deletes only the incomplete private destination; no source Git mutation, fetch/push, or remote
+  command exists.
 - `config_onboarding`: canonical registered repository list.
 - shared event hub: after write/checkout, emit `DomainInvalidated { domain: FsGitIde, revision }` so
   clients refresh. Current component can manually restart resources until the event fan-in lands.

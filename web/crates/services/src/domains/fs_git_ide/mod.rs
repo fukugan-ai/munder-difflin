@@ -12,5 +12,5 @@ pub use error::DomainError;
 pub use fs::FsService;
 pub use git::GitService;
 pub use github::GitHubService;
-pub use workspace::WorkspaceRegistry;
+pub use workspace::{PrivateWorkspaceRoot, WorkspaceRegistry};
 pub use worktree::WorktreeProvisioner;

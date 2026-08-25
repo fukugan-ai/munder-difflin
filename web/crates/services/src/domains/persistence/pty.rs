@@ -752,6 +752,7 @@ mod tests {
             action_ja: String::from("待機中"),
             pty_id: Some(String::from("pty-1")),
             worktree_path: None,
+            workspace_capability: None,
             session_id: None,
             archived: false,
         }

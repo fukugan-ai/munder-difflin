@@ -19,7 +19,9 @@ mod server {
     use dioxus::server::axum::http::{HeaderMap, StatusCode};
     use dioxus::server::axum::response::Response;
     use futures_util::{SinkExt, StreamExt};
-    use md_web_contracts::domains::fs_git_ide::{ProvisionWorktreeRequest, WorkspaceId};
+    use md_web_contracts::domains::fs_git_ide::{
+        PrivateWorkspaceCapability, ProvisionWorktreeRequest, WorkspaceCapability, WorkspaceId,
+    };
     use md_web_contracts::domains::persistence::{
         FloorAgentWrite, NaturalExitDisposition, NaturalExitWrite, TerminalQueueEnqueue,
         TerminalQueueHeadMutation,
@@ -36,7 +38,7 @@ mod server {
         TerminalQueue, evaluate_terminal_readiness, render_claude_hook_response,
         render_gemini_hook_response, restart_spawn_request, restore_spawn_request,
     };
-    use md_web_services::{WorkspaceRegistry, WorktreeProvisioner};
+    use md_web_services::{PrivateWorkspaceRoot, WorkspaceRegistry, WorktreeProvisioner};
     use tokio::sync::OnceCell;
     use uuid::Uuid;
 
@@ -215,6 +217,17 @@ mod server {
         Ok((active, restorable))
     }
 
+    pub(super) async fn workspace_private_capabilities()
+    -> Result<Vec<PrivateWorkspaceCapability>, ()> {
+        ensure_hydrated().await?;
+        Ok(agents()
+            .lock()
+            .map_err(|_| ())?
+            .values()
+            .filter_map(|state| state.record.workspace_capability.clone())
+            .collect())
+    }
+
     pub(super) async fn unarchive(agent_id: &str) -> Result<AgentRecord, ()> {
         ensure_hydrated().await?;
         let agent = agents()
@@ -251,8 +264,8 @@ mod server {
         validate_authority(&request, &workspaces).map_err(|_| spawn_failure("authority"))?;
         let worktree = provision_worktree(&request, &workspaces, &config)
             .map_err(|_| spawn_failure("worktree"))?;
-        if let Some((worktree_root, worktree_id, path)) = &worktree {
-            request.cwd.clone_from(path);
+        if let Some((worktree_root, capability)) = &worktree {
+            request.cwd.clone_from(&capability.path);
             request.isolate = false;
             WORKTREE_IDS
                 .get_or_init(|| Mutex::new(BTreeMap::new()))
@@ -260,11 +273,14 @@ mod server {
                 .map_err(|_| ())?
                 .insert(
                     request.id.clone(),
-                    (worktree_root.clone(), worktree_id.clone()),
+                    (worktree_root.clone(), capability.id.clone()),
                 );
         }
         let mut record = record_from_request(&request, None);
-        record.worktree_path = worktree.as_ref().map(|(_, _, path)| path.clone());
+        record.worktree_path = worktree
+            .as_ref()
+            .map(|(_, capability)| capability.path.clone());
+        record.workspace_capability = worktree.map(|(_, capability)| capability);
         let hook = agent_hook_launch(request.provider, &request.id, &config)
             .map_err(|_| spawn_failure("hook"))?;
         let result = match registry().spawn_with_hook(request, hook) {
@@ -1232,15 +1248,27 @@ mod server {
             return Err(());
         }
         let candidate = Path::new(&request.cwd).canonicalize().map_err(|_| ())?;
-        if workspaces
+        let workspace = workspaces
             .list()
-            .iter()
-            .filter_map(|workspace| Path::new(&workspace.display_path).canonicalize().ok())
-            .any(|root| candidate.starts_with(root))
-        {
-            Ok(())
-        } else {
-            Err(())
+            .into_iter()
+            .filter_map(|workspace| {
+                let root = Path::new(&workspace.display_path).canonicalize().ok()?;
+                candidate.starts_with(&root).then_some((
+                    root.components().count(),
+                    root,
+                    workspace.capability,
+                ))
+            })
+            .max_by_key(|(depth, _, _)| *depth)
+            .ok_or(())?;
+        match workspace {
+            (_, root, WorkspaceCapability::SourceReadOnly) => (request.isolate
+                && candidate == root)
+                .then_some(())
+                .ok_or(()),
+            (_, _, WorkspaceCapability::PrivateMutable) => {
+                (!request.isolate).then_some(()).ok_or(())
+            }
         }
     }
 
@@ -1260,14 +1288,28 @@ mod server {
         if paths.is_empty() {
             paths.extend(config.registered_repos.iter().map(PathBuf::from));
         }
-        if let Ok(records) = agents().lock() {
-            paths.extend(
+        let sources = WorkspaceRegistry::from_source_paths(paths);
+        let Some(harness_home) = std::env::var_os("MD_HARNESS_HOME")
+            .map(PathBuf::from)
+            .filter(|path| path.is_absolute())
+            .or_else(|| config.harness_home.as_ref().map(PathBuf::from))
+            .filter(|path| path.is_absolute())
+        else {
+            return sources;
+        };
+        let Ok(authority) = PrivateWorkspaceRoot::new(harness_home.join("worktrees")) else {
+            return sources;
+        };
+        let private_capabilities = agents()
+            .lock()
+            .map(|records| {
                 records
                     .values()
-                    .filter_map(|state| state.record.worktree_path.as_ref().map(PathBuf::from)),
-            );
-        }
-        WorkspaceRegistry::from_paths(paths)
+                    .filter_map(|state| state.record.workspace_capability.clone())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        sources.with_private_workspaces(&authority, private_capabilities)
     }
 
     fn worktree_provisioner(root: PathBuf) -> Result<Arc<WorktreeProvisioner>, ()> {
@@ -1285,7 +1327,7 @@ mod server {
         request: &SpawnAgentRequest,
         workspaces: &WorkspaceRegistry,
         config: &md_web_contracts::domains::config_onboarding::PublicConfig,
-    ) -> Result<Option<(PathBuf, String, String)>, ()> {
+    ) -> Result<Option<(PathBuf, PrivateWorkspaceCapability)>, ()> {
         if !request.isolate {
             return Ok(None);
         }
@@ -1299,7 +1341,10 @@ mod server {
         let workspace = workspaces
             .list()
             .into_iter()
-            .find(|workspace| Path::new(&workspace.display_path) == candidate)
+            .find(|workspace| {
+                workspace.capability == WorkspaceCapability::SourceReadOnly
+                    && Path::new(&workspace.display_path) == candidate
+            })
             .ok_or(())?;
         let worktree_root = harness_home.join("worktrees");
         let isolated = worktree_provisioner(worktree_root.clone())?
@@ -1312,7 +1357,7 @@ mod server {
                 },
             )
             .map_err(|_| ())?;
-        Ok(Some((worktree_root, isolated.id, isolated.path)))
+        Ok(Some((worktree_root, isolated.capability)))
     }
 
     fn rollback_worktree(agent_id: &str, workspaces: &WorkspaceRegistry) {
@@ -1443,6 +1488,7 @@ mod server {
             action_ja: String::from("起動中"),
             pty_id,
             worktree_path: None,
+            workspace_capability: None,
             session_id: request.resume_session_id.clone(),
             archived: false,
         }
@@ -1566,6 +1612,14 @@ fn safe_error() -> ServerFnError {
 pub(crate) fn running_terminal_count() -> Result<u32, ServerFnError> {
     let count = server::registry().list().map_err(|_| safe_error())?.len();
     Ok(u32::try_from(count).unwrap_or(u32::MAX))
+}
+
+#[cfg(feature = "server")]
+pub(crate) async fn workspace_private_capabilities()
+-> Result<Vec<md_web_contracts::domains::fs_git_ide::PrivateWorkspaceCapability>, ServerFnError> {
+    server::workspace_private_capabilities()
+        .await
+        .map_err(|_| safe_error())
 }
 
 #[cfg(feature = "server")]

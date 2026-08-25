@@ -12,7 +12,7 @@ pub use domains::config_onboarding::{
 };
 pub use domains::connections::ConnectionsService;
 pub use domains::fs_git_ide::{
-    DomainError as FsGitIdeError, FsService, GitHubService, GitService, WorkspaceRegistry,
-    WorktreeProvisioner,
+    DomainError as FsGitIdeError, FsService, GitHubService, GitService, PrivateWorkspaceRoot,
+    WorkspaceRegistry, WorktreeProvisioner,
 };
 pub use persistence::ServiceError;

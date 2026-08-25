@@ -9,6 +9,7 @@ use super::api;
 #[component]
 pub(super) fn GitPanel(
     workspace_id: Option<WorkspaceId>,
+    mutable_workspace: bool,
     overview: Option<GitOverview>,
     issues: Vec<GitHubIssue>,
     ci_runs: Vec<CiRun>,
@@ -85,7 +86,7 @@ pub(super) fn GitPanel(
             return;
         };
         let reference = checkout_ref.read().trim().to_owned();
-        if !checkout_ready(&reference, *checkout_confirmed.read()) {
+        if !mutable_workspace || !checkout_ready(&reference, *checkout_confirmed.read()) {
             action_note.set(Some(String::from(
                 "参照を入力し、ローカル切替を確認してください",
             )));
@@ -216,10 +217,13 @@ pub(super) fn GitPanel(
                     }
                     div { class: "md-git-panel__tool",
                         h4 { "安全なローカルcheckout" }
-                        input { aria_label: "checkoutする参照", value: "{checkout_ref}", oninput: move |event| checkout_ref.set(event.value()) }
-                        label { input { r#type: "checkbox", checked: *checkout_detach.read(), onchange: move |event| checkout_detach.set(event.checked()) } "detached" }
-                        label { input { r#type: "checkbox", checked: *checkout_confirmed.read(), onchange: move |event| checkout_confirmed.set(event.checked()) } "未保存変更がなく、Agent停止済みと確認" }
-                        button { class: "md-ide-button", r#type: "button", disabled: !checkout_ready(&checkout_ref.read(), *checkout_confirmed.read()), onclick: checkout, "checkout" }
+                        if !mutable_workspace {
+                            p { class: "md-ide-note", "登録元ではcheckoutできません。Agent用private workspaceを選択してください。" }
+                        }
+                        input { aria_label: "checkoutする参照", disabled: !mutable_workspace, value: "{checkout_ref}", oninput: move |event| checkout_ref.set(event.value()) }
+                        label { input { r#type: "checkbox", disabled: !mutable_workspace, checked: *checkout_detach.read(), onchange: move |event| checkout_detach.set(event.checked()) } "detached" }
+                        label { input { r#type: "checkbox", disabled: !mutable_workspace, checked: *checkout_confirmed.read(), onchange: move |event| checkout_confirmed.set(event.checked()) } "未保存変更がなく、Agent停止済みと確認" }
+                        button { class: "md-ide-button", r#type: "button", disabled: !mutable_workspace || !checkout_ready(&checkout_ref.read(), *checkout_confirmed.read()), onclick: checkout, "checkout" }
                     }
                 },
                 Some(_) => rsx! { p { class: "md-ide-note", "Gitリポジトリではありません" } },

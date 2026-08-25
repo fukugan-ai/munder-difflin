@@ -12,22 +12,27 @@ async fn registry() -> Result<md_web_services::WorkspaceRegistry, ServerFnError>
     let override_paths = std::env::var_os("MD_REGISTERED_REPOS")
         .map(|value| std::env::split_paths(&value).collect::<Vec<_>>())
         .filter(|paths| !paths.is_empty());
-    let paths = if let Some(paths) = override_paths {
-        paths
-    } else {
-        let repository = super::persistence_repository()
-            .await
-            .map_err(|_| safe_error())?;
-        let config = md_web_services::domains::config_onboarding::load_config(&repository)
-            .await
-            .map_err(|_| safe_error())?;
-        config
-            .registered_repos
-            .into_iter()
-            .map(PathBuf::from)
-            .collect()
+    let repository = super::persistence_repository()
+        .await
+        .map_err(|_| safe_error())?;
+    let config = md_web_services::domains::config_onboarding::load_config(&repository)
+        .await
+        .map_err(|_| safe_error())?;
+    let paths = override_paths
+        .unwrap_or_else(|| config.registered_repos.iter().map(PathBuf::from).collect());
+    let sources = md_web_services::WorkspaceRegistry::from_source_paths(paths);
+    let Some(harness_home) = std::env::var_os("MD_HARNESS_HOME")
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .or_else(|| config.harness_home.as_ref().map(PathBuf::from))
+        .filter(|path| path.is_absolute())
+    else {
+        return Ok(sources);
     };
-    Ok(md_web_services::WorkspaceRegistry::from_paths(paths))
+    let authority = md_web_services::PrivateWorkspaceRoot::new(harness_home.join("worktrees"))
+        .map_err(service_error)?;
+    let private_capabilities = super::pty::workspace_private_capabilities().await?;
+    Ok(sources.with_private_workspaces(&authority, private_capabilities))
 }
 
 #[cfg_attr(not(feature = "server"), allow(dead_code))]
@@ -48,7 +53,9 @@ pub(crate) async fn workspaces() -> Result<Vec<WorkspaceSummary>, ServerFnError>
     Err(safe_error())
 }
 
-#[get("/api/fs-git-ide/list/:workspace_id/:rel_path")]
+// Directory paths may legitimately be empty at the workspace root. Keep them in the request body
+// so URL path normalization cannot erase the root representation before the server function runs.
+#[post("/api/fs-git-ide/list")]
 pub(crate) async fn list_dir(
     workspace_id: WorkspaceId,
     rel_path: String,

@@ -119,12 +119,19 @@ pub enum IsolatedWorktreeState {
     Archived,
 }
 
-/// Opaque server-issued worktree capability and its process cwd.
+/// Opaque server-issued authority for one app-owned mutable clone/copy.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct IsolatedWorktree {
+pub struct PrivateWorkspaceCapability {
     pub id: String,
     pub workspace_id: WorkspaceId,
+    pub source_workspace_id: WorkspaceId,
     pub path: String,
+}
+
+/// Provisioning receipt. The nested capability must be persisted with the Agent record.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct IsolatedWorktree {
+    pub capability: PrivateWorkspaceCapability,
     pub branch: String,
     pub state: IsolatedWorktreeState,
 }
