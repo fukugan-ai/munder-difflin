@@ -14,7 +14,7 @@ author:
   initials: CG
 faq:
   - q: "How long does it take to get Munder Difflin running?"
-    a: "About five minutes. Grab the signed build for macOS, Windows, or Linux from the releases page, or run from source with Node.js 18+. Onboarding validates your setup at the very first step — as of v0.4.4 it checks your home folder immediately instead of failing four steps later, and the Prerequisites page in Settings shows live status for every tool an engine needs, with a button that asks Michael to install what's missing."
+    a: "About five minutes. Grab the signed build for macOS, Windows, or Linux from the releases page, or run from source with Node.js 22.12+. Onboarding validates your setup at the very first step — as of v0.4.4 it checks your home folder immediately instead of failing four steps later, and the Prerequisites page in Settings shows live status for every tool an engine needs, with a button that asks Michael to install what's missing."
   - q: "What do I need before installing Munder Difflin?"
     a: "At least one supported agent CLI — Claude Code, Antigravity, Codex, Grok, Kimi, Qwen, OpenCode, Crush, pi, or GitHub Copilot CLI. If you're missing one (or git, Node, uv, MemPalace), Settings → Prerequisites shows exactly what's absent with the platform-correct install command, and can hand the whole job to Michael."
   - q: "Who is Michael and how do I give him work?"

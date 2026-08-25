@@ -17,7 +17,7 @@ participating, you agree to uphold it.
   Linux builds, ship from the [releases page](https://github.com/chaitanyagiri/munder-difflin/releases/latest).
   Cross-platform smoke-testing and fixes are still very welcome (see
   [Good first areas](#good-first-areas)).
-- **Node.js 18+** and npm.
+- **Node.js 22.12+** and npm.
 - A **C/C++ toolchain** to build `node-pty`'s native addon. On macOS:
   ```bash
   xcode-select --install

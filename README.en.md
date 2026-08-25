@@ -173,7 +173,7 @@ terminal/event plane, and [`DESIGN.md`](./DESIGN.md) for the visual system.
 ### Prerequisites
 
 - **macOS, Windows, or Linux**.
-- **Node.js 18+** and npm.
+- **Node.js 22.12+** and npm.
 - A **C/C++ toolchain** for `node-pty`'s native addon — on macOS, install Xcode Command Line Tools:
   ```bash
   xcode-select --install
@@ -245,7 +245,7 @@ npm run db:import -- --source-id legacy-cost-2026-08 --cost-jsonl /path/to/cost-
 ```
 
 Keep `--source-id` stable when resuming or rerunning the same backup.
-SQLite import requires Node.js 22 or newer.
+SQLite import requires Node.js 22.12 or newer.
 Import proceeds only while the app is not holding that namespace, stops before writes on invalid rows, and never renames, deletes, or overwrites the source.
 
 ## Architecture

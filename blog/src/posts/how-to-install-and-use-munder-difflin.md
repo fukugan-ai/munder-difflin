@@ -26,7 +26,7 @@ faq:
 ---
 
 <div class="callout tldr"><span class="ic">TL;DR</span><p>Install <strong>Munder Difflin</strong> by
-downloading a build (macOS, Windows, or Linux) or running from source with Node 18+. Onboarding
+downloading a build (macOS, Windows, or Linux) or running from source with Node 22.12+. Onboarding
 opens on the real pitch — <strong>a clone of you, working 24/7</strong> — validates your setup at
 step one, and the <strong>Prerequisites</strong> page shows live status for every tool an engine
 needs. Then you talk to <strong>Michael</strong>, spin up agents on any of <strong>ten
@@ -59,7 +59,7 @@ use case is exactly what it's built for. Keep that in mind as you set it up.
 - **At least one supported agent CLI** on your `PATH`. Ten engines are first-class: **Claude Code,
   Antigravity, Codex, Grok, Kimi, Qwen, OpenCode, Crush, pi, and GitHub Copilot CLI.** Bring
   whichever subscriptions you already have — mixing engines on one floor is normal.
-- **From source only:** Node.js 18+ with npm, and a C/C++ toolchain for `node-pty`'s native addon
+- **From source only:** Node.js 22.12+ with npm, and a C/C++ toolchain for `node-pty`'s native addon
   (Xcode Command Line Tools on macOS, `build-essential` on Linux, VS Build Tools on Windows).
   Prebuilt apps need none of this.
 - *Optional:* **MemPalace**, the semantic memory index, for instant cross-session recall. The app

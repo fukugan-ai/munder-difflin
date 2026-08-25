@@ -86,7 +86,7 @@ Munder Difflinは、実際のターミナルプロセスをそのまま使いな
 次の用途には慎重な評価が必要です。
 
 - 完成済みの企業向け運用製品や、無人での破壊的操作を求める場合。
-- 対応CLI、Node.js 18以降、`node-pty`をビルドできるC/C++ツールチェーンを用意できない環境。
+- 対応CLI、Node.js 22.12以降、`node-pty`をビルドできるC/C++ツールチェーンを用意できない環境。
 - プロンプト、コード、ファイルパス、エージェント出力を含むテレメトリーを想定している場合。本製品はそれらを送信しません。
 
 ## 最短で試す
@@ -94,7 +94,7 @@ Munder Difflinは、実際のターミナルプロセスをそのまま使いな
 ### 前提条件
 
 - **macOS、Windows、Linux**のいずれか。
-- **Node.js 18以降**とnpm。
+- **Node.js 22.12以降**とnpm。
 - `node-pty`のネイティブアドオンをビルドできる**C/C++ツールチェーン**。
   macOSではXcode Command Line Toolsを導入します。
 
@@ -181,7 +181,7 @@ npm run db:import -- --source-id legacy-cost-2026-08 --cost-jsonl /path/to/cost-
 ```
 
 `--source-id`は同じbackupを再開または再実行するときに変えないでください。
-SQLite importにはNode.js 22以降が必要です。
+SQLite importにはNode.js 22.12以降が必要です。
 importは同じnamespaceのアプリが停止しているときだけ進み、不正な行があればwrite前に停止します。
 source fileをrename、削除、上書きしません。
 
