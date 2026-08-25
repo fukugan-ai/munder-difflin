@@ -29,10 +29,6 @@ pub(crate) async fn onboarding_spawn_team(
 
 #[cfg(feature = "server")]
 async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnError> {
-    use md_web_contracts::domains::memory_skills::{
-        RoleSkillAssignment, SoftwareTeamRole, TeamSkillAssignments,
-    };
-
     let repository = super::persistence_repository().await?;
     let persisted = md_web_services::domains::config_onboarding::load_config(&repository)
         .await
@@ -49,35 +45,7 @@ async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnErro
         return Err(safe_error());
     }
 
-    let assignments = TeamSkillAssignments {
-        version: 1,
-        assignments: receipt
-            .role_skill_assignments
-            .iter()
-            .map(|assignment| {
-                let (agent_id, display_name, role) = match assignment.role {
-                    TeamRole::Aria => ("aria", "Aria", SoftwareTeamRole::Orchestrator),
-                    TeamRole::Implementer => {
-                        ("implementer", "Implementer", SoftwareTeamRole::Implementer)
-                    }
-                    TeamRole::Verifier => ("verifier", "Verifier", SoftwareTeamRole::Verifier),
-                };
-                RoleSkillAssignment {
-                    agent_id: String::from(agent_id),
-                    display_name: String::from(display_name),
-                    role,
-                    skill_ids: assignment
-                        .skills
-                        .iter()
-                        .map(|skill| skill.managed_id.clone())
-                        .collect(),
-                    task_condition: None,
-                }
-            })
-            .collect(),
-        specialists_on_demand: true,
-        updated_at_ms: 0,
-    };
+    let assignments = runtime_skill_assignments(&receipt.role_skill_assignments);
     super::memory::save_base_skill_assignments(assignments).await?;
 
     let provider = pty_provider(&receipt.aria.provider)?;
@@ -106,16 +74,60 @@ async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnErro
         });
         if !already_active {
             super::office::office_spawn(member.request(receipt, provider, project.clone())).await?;
-            let injection =
-                super::memory::assigned_skill_injection(member.assignment_id, &[]).await?;
-            super::pty::pty_queue_system(
-                member.process_id,
-                &skill_prompt(member.display_name, injection),
-            )
-            .await?;
         }
+        // A TeamStarting retry may observe a role whose process was persisted just
+        // before an earlier skill-injection failure. Re-apply the role assignment
+        // even when the existing process is reused so repair cannot confirm a team
+        // that never received its assigned skills.
+        let injection = super::memory::assigned_skill_injection(member.assignment_id, &[]).await?;
+        super::pty::pty_queue_system(
+            member.process_id,
+            &skill_prompt(member.display_name, injection),
+        )
+        .await?;
     }
     Ok(())
+}
+
+#[cfg(feature = "server")]
+fn runtime_skill_assignments(
+    configured: &[md_web_contracts::domains::config_onboarding::RoleSkillAssignment],
+) -> md_web_contracts::domains::memory_skills::TeamSkillAssignments {
+    use md_web_contracts::domains::memory_skills::{
+        RoleSkillAssignment, SoftwareTeamRole, TeamSkillAssignments,
+    };
+
+    TeamSkillAssignments {
+        version: 1,
+        assignments: configured
+            .iter()
+            .map(|assignment| {
+                let (agent_id, display_name, role) = match assignment.role {
+                    TeamRole::Aria => ("aria", "Aria", SoftwareTeamRole::Orchestrator),
+                    TeamRole::Implementer => {
+                        ("implementer", "Implementer", SoftwareTeamRole::Implementer)
+                    }
+                    TeamRole::Verifier => ("verifier", "Verifier", SoftwareTeamRole::Verifier),
+                };
+                RoleSkillAssignment {
+                    agent_id: String::from(agent_id),
+                    display_name: String::from(display_name),
+                    role,
+                    skill_ids: assignment
+                        .skills
+                        .iter()
+                        // `managed_id` identifies a catalog source/version (for example
+                        // `2:local-development`). Runtime injection resolves the installed
+                        // directory by its canonical skill name.
+                        .map(|skill| skill.name.clone())
+                        .collect(),
+                    task_condition: None,
+                }
+            })
+            .collect(),
+        specialists_on_demand: true,
+        updated_at_ms: 0,
+    }
 }
 
 #[cfg(feature = "server")]
@@ -247,4 +259,52 @@ fn skill_prompt(
 #[cfg(feature = "server")]
 fn safe_error() -> ServerFnError {
     ServerFnError::new("初期チームを起動できません")
+}
+
+#[cfg(all(test, feature = "server"))]
+mod tests {
+    use md_web_contracts::domains::config_onboarding::{RoleSkillAssignment, TeamRole};
+    use md_web_contracts::domains::memory_skills::{LocalSkill, SkillProvider, SkillScope};
+
+    use super::runtime_skill_assignments;
+
+    fn skill(name: &str) -> LocalSkill {
+        LocalSkill {
+            id: format!("user:{name}"),
+            name: String::from(name),
+            description: String::new(),
+            provider: SkillProvider::Codex,
+            scope: SkillScope::User,
+            managed_id: format!("2:{name}"),
+        }
+    }
+
+    #[test]
+    fn namespaced_catalog_ids_become_canonical_runtime_skill_ids() {
+        let configured = [
+            (
+                TeamRole::Aria,
+                vec!["aria-orchestration", "local-development"],
+            ),
+            (TeamRole::Implementer, vec!["local-development"]),
+            (TeamRole::Verifier, vec!["perfectionist-reviewer"]),
+        ]
+        .into_iter()
+        .map(|(role, names)| RoleSkillAssignment {
+            role,
+            skills: names.into_iter().map(skill).collect(),
+        })
+        .collect::<Vec<_>>();
+
+        let runtime = runtime_skill_assignments(&configured);
+
+        assert_eq!(runtime.assignments.len(), 3);
+        assert_eq!(runtime.assignments[0].skill_ids[0], "aria-orchestration");
+        assert!(runtime.assignments.iter().all(|assignment| {
+            assignment
+                .skill_ids
+                .iter()
+                .all(|skill_id| !skill_id.contains(':'))
+        }));
+    }
 }

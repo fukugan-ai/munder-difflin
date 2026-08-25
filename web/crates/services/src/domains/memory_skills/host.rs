@@ -26,6 +26,7 @@ pub struct MemorySkillsHost {
     pub activity: ActivityService,
     summarizer_cli: Option<PathBuf>,
     data_root: PathBuf,
+    local_skill_roots: Vec<PathBuf>,
     process: ProcessControl,
 }
 
@@ -115,6 +116,7 @@ impl MemorySkillsHost {
                 project_skill_root(project.join(".codex/skills"), SkillProvider::Codex),
             ]);
         }
+        let local_skill_roots = roots.iter().map(|root| root.path.clone()).collect();
         let install_root = user
             .as_deref()
             .map(|home| home.join(".claude/skills"))
@@ -134,6 +136,7 @@ impl MemorySkillsHost {
             activity: ActivityService::new(harness.join("hive/log.jsonl")),
             summarizer_cli,
             data_root,
+            local_skill_roots,
             process,
         })
     }
@@ -183,9 +186,10 @@ impl MemorySkillsHost {
     }
 
     pub fn base_skills(&self) -> Result<BaseSkillService, DomainError> {
-        BaseSkillService::with_process_control(
+        BaseSkillService::with_process_control_and_authoritative_roots(
             self.data_root.join("base-skills"),
             self.process.clone(),
+            self.local_skill_roots.clone(),
         )
     }
 

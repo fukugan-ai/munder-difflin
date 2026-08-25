@@ -68,11 +68,6 @@ impl BaseSkillService {
         root: PathBuf,
         process: ProcessControl,
     ) -> Result<Self, DomainError> {
-        let mut sources = configured_sources()?;
-        if env_flag("MD_ENABLE_OFFICIAL_SKILL_SOURCES", false) {
-            sources.extend(official_sources());
-        }
-        deduplicate_sources(&mut sources);
         let authoritative_roots = env::var_os("MD_AUTHORITATIVE_SKILL_ROOTS")
             .map(|value| {
                 env::split_paths(&value)
@@ -80,6 +75,19 @@ impl BaseSkillService {
                     .collect()
             })
             .unwrap_or_default();
+        Self::with_process_control_and_authoritative_roots(root, process, authoritative_roots)
+    }
+
+    pub fn with_process_control_and_authoritative_roots(
+        root: PathBuf,
+        process: ProcessControl,
+        authoritative_roots: Vec<PathBuf>,
+    ) -> Result<Self, DomainError> {
+        let mut sources = configured_sources()?;
+        if env_flag("MD_ENABLE_OFFICIAL_SKILL_SOURCES", false) {
+            sources.extend(official_sources());
+        }
+        deduplicate_sources(&mut sources);
         Ok(Self {
             root,
             sources,
@@ -1174,15 +1182,27 @@ fn epoch_millis() -> i64 {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::io::{Read, Write};
     use std::net::TcpListener;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::{
-        OpenAiSkillsClient, collect_declared_skill_paths, official_sources, parse_frontmatter,
-        safe_id, validate_assignments,
+        BaseSkillService, OpenAiSkillsClient, collect_declared_skill_paths, official_sources,
+        parse_frontmatter, safe_id, validate_assignments,
     };
-    use md_web_contracts::domains::memory_skills::TeamSkillAssignments;
+    use crate::domains::memory_skills::ProcessControl;
+    use md_web_contracts::domains::memory_skills::{
+        RoleSkillAssignment, SoftwareTeamRole, TeamSkillAssignments,
+    };
+
+    fn unique_test_root(name: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |duration| duration.as_nanos());
+        std::env::temp_dir().join(format!("md-{name}-{}-{nonce}", std::process::id()))
+    }
 
     #[test]
     fn standard_skill_frontmatter_is_catalogued_without_running_scripts() {
@@ -1197,6 +1217,42 @@ mod tests {
     #[test]
     fn minimum_team_assignments_are_valid() {
         assert!(validate_assignments(&TeamSkillAssignments::minimum_software_team()).is_ok());
+    }
+
+    #[test]
+    fn canonical_local_catalog_name_resolves_without_environment_roots()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let root = unique_test_root("base-skill-local-root");
+        let local_root = root.join("local-skills");
+        fs::create_dir_all(local_root.join("local-development"))?;
+        fs::write(
+            local_root.join("local-development/SKILL.md"),
+            "---\nname: local-development\ndescription: Local development\n---\nInstructions",
+        )?;
+        let service = BaseSkillService::with_process_control_and_authoritative_roots(
+            root.join("managed"),
+            ProcessControl::default(),
+            vec![local_root],
+        )?;
+        service.save_assignments(TeamSkillAssignments {
+            version: 1,
+            assignments: vec![RoleSkillAssignment {
+                agent_id: String::from("aria"),
+                display_name: String::from("Aria"),
+                role: SoftwareTeamRole::Orchestrator,
+                skill_ids: vec![String::from("local-development")],
+                task_condition: None,
+            }],
+            specialists_on_demand: true,
+            updated_at_ms: 0,
+        })?;
+
+        let injection = service.injection_for("aria", &[])?;
+
+        assert_eq!(injection.skills.len(), 1);
+        assert_eq!(injection.skills[0].skill_id, "local-development");
+        fs::remove_dir_all(root)?;
+        Ok(())
     }
 
     #[test]
