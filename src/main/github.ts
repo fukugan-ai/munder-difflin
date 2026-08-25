@@ -1,10 +1,14 @@
 import { spawn } from 'node:child_process';
+import { resolveCommand } from './shellEnv';
+
+const ALLOWED_REPOS = new Set(['fukugan-ai/munder-difflin']);
+const ORIGINAL_REPO = 'chaitanyagiri/munder-difflin';
+const GH_ERROR = 'GitHub request failed';
 
 /** A GitHub issue, normalized for the renderer (labels/assignees flattened to names). */
 export interface GHIssue {
   number: number;
   title: string;
-  body: string;
   url: string;
   labels: string[];
   assignees: string[];
@@ -14,7 +18,6 @@ export interface GHIssue {
 interface RawGHIssue {
   number?: number;
   title?: string;
-  body?: string;
   url?: string;
   state?: string;
   labels?: Array<{ name?: string }>;
@@ -28,21 +31,49 @@ interface RawGHIssue {
  * installed), non-zero exit (e.g. unauthenticated / not a repo), or a JSON
  * parse failure — so callers never have to try/catch.
  */
-export function listIssues(cwd: string): Promise<{ ok: boolean; issues?: GHIssue[]; error?: string }> {
+export function issueListArgs(repo: string): string[] {
+  return ['issue', 'list', '--repo', repo, '--json', 'number,title,assignees,labels,url,state', '--limit', '30'];
+}
+
+export function ciRunListArgs(repo: string): string[] {
+  return ['run', 'list', '--repo', repo, '--limit', '5', '--json', 'name,status,conclusion,url,databaseId'];
+}
+
+export function parseAllowedGitHubRepo(remote: string): string | null {
+  const trimmed = remote.trim();
+  const match = trimmed.match(/^(?:https:\/\/github\.com\/|ssh:\/\/git@github\.com\/|git@github\.com:)([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))\/([A-Za-z0-9._-]+?)(?:\.git)?$/i);
+  if (!match) return null;
+  const repo = `${match[1]}/${match[2]}`;
+  if (repo.toLowerCase() === ORIGINAL_REPO || !ALLOWED_REPOS.has(repo.toLowerCase())) return null;
+  return repo;
+}
+
+/** Resolve the explicit GitHub target from an already-authorized registered repo. */
+export function resolveGitHubRepo(cwd: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const proc = spawn(resolveCommand('git'), ['-c', `core.hooksPath=${process.platform === 'win32' ? 'NUL' : '/dev/null'}`, 'remote', 'get-url', 'origin'], { cwd });
+    let stdout = '';
+    proc.stdout.on('data', (d) => { stdout += d.toString(); });
+    proc.stderr.on('data', () => { /* never expose local paths or config */ });
+    proc.on('error', () => resolve(null));
+    proc.on('close', (code) => resolve(code === 0 ? parseAllowedGitHubRepo(stdout) : null));
+  });
+}
+
+export function listIssues(cwd: string, repo: string): Promise<{ ok: boolean; issues?: GHIssue[]; error?: string }> {
   return new Promise((resolve) => {
     const proc = spawn(
-      'gh',
-      ['issue', 'list', '--json', 'number,title,body,assignees,labels,url,state', '--limit', '30'],
+      resolveCommand('gh'),
+      issueListArgs(repo),
       { cwd }
     );
     let stdout = '';
-    let stderr = '';
     proc.stdout.on('data', (d) => { stdout += d.toString(); });
-    proc.stderr.on('data', (d) => { stderr += d.toString(); });
-    proc.on('error', (e) => resolve({ ok: false, error: e.message }));
+    proc.stderr.on('data', () => { /* deliberately not exposed across IPC */ });
+    proc.on('error', () => resolve({ ok: false, error: GH_ERROR }));
     proc.on('close', (code) => {
       if (code !== 0) {
-        resolve({ ok: false, error: stderr.trim() || `gh exited ${code}` });
+        resolve({ ok: false, error: GH_ERROR });
         return;
       }
       try {
@@ -50,14 +81,13 @@ export function listIssues(cwd: string): Promise<{ ok: boolean; issues?: GHIssue
         const issues: GHIssue[] = (Array.isArray(raw) ? raw : []).map((i) => ({
           number: i.number ?? 0,
           title: i.title ?? '',
-          body: i.body ?? '',
           url: i.url ?? '',
           labels: (i.labels ?? []).map((l) => l.name ?? '').filter(Boolean),
           assignees: (i.assignees ?? []).map((a) => a.login ?? '').filter(Boolean)
         }));
         resolve({ ok: true, issues });
-      } catch (e) {
-        resolve({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      } catch {
+        resolve({ ok: false, error: 'Invalid GitHub response' });
       }
     });
   });
@@ -88,21 +118,20 @@ interface RawCIRun {
  * installed), non-zero exit (e.g. unauthenticated / not a repo / no Actions),
  * or a JSON parse failure — so callers never have to try/catch.
  */
-export function listCIRuns(cwd: string): Promise<{ ok: boolean; runs?: CIRun[]; error?: string }> {
+export function listCIRuns(cwd: string, repo: string): Promise<{ ok: boolean; runs?: CIRun[]; error?: string }> {
   return new Promise((resolve) => {
     const proc = spawn(
-      'gh',
-      ['run', 'list', '--limit', '5', '--json', 'name,status,conclusion,url,databaseId'],
+      resolveCommand('gh'),
+      ciRunListArgs(repo),
       { cwd }
     );
     let stdout = '';
-    let stderr = '';
     proc.stdout.on('data', (d) => { stdout += d.toString(); });
-    proc.stderr.on('data', (d) => { stderr += d.toString(); });
-    proc.on('error', (e) => resolve({ ok: false, error: e.message }));
+    proc.stderr.on('data', () => { /* deliberately not exposed across IPC */ });
+    proc.on('error', () => resolve({ ok: false, error: GH_ERROR }));
     proc.on('close', (code) => {
       if (code !== 0) {
-        resolve({ ok: false, error: stderr.trim() || `gh exited ${code}` });
+        resolve({ ok: false, error: GH_ERROR });
         return;
       }
       try {
@@ -114,8 +143,8 @@ export function listCIRuns(cwd: string): Promise<{ ok: boolean; runs?: CIRun[]; 
           url: r.url ?? ''
         }));
         resolve({ ok: true, runs });
-      } catch (e) {
-        resolve({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      } catch {
+        resolve({ ok: false, error: 'Invalid GitHub response' });
       }
     });
   });

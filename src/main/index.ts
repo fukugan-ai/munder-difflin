@@ -3,10 +3,10 @@ import { spawn } from 'node:child_process';
 import {
   rmSync, existsSync, readFileSync, readdirSync, statSync, cpSync, writeFileSync,
   unlinkSync, mkdirSync, renameSync, createWriteStream, copyFileSync, lstatSync,
-  readlinkSync, symlinkSync
+  readlinkSync, symlinkSync, realpathSync
 } from 'node:fs';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
-import { join, resolve, sep, basename, dirname } from 'node:path';
+import { join, resolve, sep, basename, dirname, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { request as httpsRequest } from 'node:https';
 import { PtyManager, type SpawnOptions } from './pty';
@@ -17,7 +17,7 @@ import {
   readConfig, writeConfig, setAgentTokenCap, resetConfig, ensureHarnessHome, ensureClaudePermissionsAccepted,
   modelForRole, OPS_STANDUP_MISSION, HEARTBEAT_MISSION, COMPACT_MAINTENANCE_MISSION, type HarnessConfig, type ScheduledMission
 } from './config';
-import { listDir, readFileText, readFileBinary, writeFileText, statAbs, expandTilde } from './fs';
+import { listDir, readFileText, readFileBinary, writeFileText, statAbs, expandTilde, authorizeRootFromAllowlist } from './fs';
 import { normalizeWeekly, weeklyDelayMs } from '../shared/weeklySchedule';
 import {
   getBranch, getStatus, getLog, getBranches, getAheadBehind, isRepo, getDiff, mainRepoRoot,
@@ -33,7 +33,7 @@ import { KnowledgeManager } from './knowledge';
 import { MemoryReflector, type ReflectSettings } from './reflect';
 import { PersistStore } from './db';
 import { readAgentUsage, readContextTokens, seedSessionTranscript, resolveSessionCwd } from './transcript';
-import { listIssues, listCIRuns } from './github';
+import { listIssues, listCIRuns, resolveGitHubRepo } from './github';
 import { SlackWebhookServer, SlackReplyServer, postSlackReply, type SlackEventFile } from './slack';
 import {
   WebhookServer,
@@ -354,6 +354,8 @@ const worktreePaths = new Map<string, string>();
 /** id → the original repo cwd the worktree was created from (needed to run
  *  `git worktree remove` from the parent tree, not the worktree itself). */
 const worktreeOrigins = new Map<string, string>();
+/** Base ref captured when an isolated worktree is created, for safe teardown. */
+const worktreeBases = new Map<string, string>();
 
 /** A live god-triggered ephemeral worker, tracked from spawn to teardown. */
 interface WorkerRec {
@@ -412,6 +414,44 @@ interface PreservedWorktree {
  *  work is provably integrated, or when the worktree is already gone from disk. */
 const preservedWorktrees = new Map<string, PreservedWorktree>();
 
+function isTrustedIpcSender(evt: Electron.IpcMainInvokeEvent): boolean {
+  const owner = BrowserWindow.fromWebContents(evt.sender);
+  return owner !== null && allWindows.has(owner) && !owner.isDestroyed() && !evt.sender.isDestroyed();
+}
+
+function canonicalManagedRoots(): string[] {
+  const candidates = [
+    ...(readConfig().registeredRepos ?? []),
+    ...worktreePaths.values(),
+    ...preservedWorktrees.keys()
+  ];
+  const roots = new Set<string>();
+  for (const candidate of candidates) {
+    try {
+      const expanded = expandTilde(candidate);
+      if (lstatSync(expanded).isSymbolicLink()) continue;
+      roots.add(realpathSync(expanded));
+    } catch { /* unavailable roots are not capabilities */ }
+  }
+  return [...roots];
+}
+
+function authorizeManagedRoot(evt: Electron.IpcMainInvokeEvent, requested: unknown): string | null {
+  if (!isTrustedIpcSender(evt) || typeof requested !== 'string' || !requested || requested.includes('\0')) return null;
+  return authorizeRootFromAllowlist(requested, canonicalManagedRoots());
+}
+
+function authorizeManagedPath(evt: Electron.IpcMainInvokeEvent, requested: unknown): { root: string; path: string } | null {
+  if (!isTrustedIpcSender(evt) || typeof requested !== 'string' || !requested || requested.includes('\0')) return null;
+  const expanded = expandTilde(requested);
+  if (!isAbsolute(expanded)) return null;
+  const lexical = resolve(expanded);
+  for (const root of canonicalManagedRoots()) {
+    if (lexical === root || lexical.startsWith(root + sep)) return { root, path: lexical };
+  }
+  return null;
+}
+
 /**
  * Tear down everything tied to a PTY id: archive its hive agent, remove its
  * isolated git worktree, and drop the bookkeeping-map entries. Runs on BOTH an
@@ -459,20 +499,20 @@ function teardownPty(id: string): void {
   const wtPath = worktreePaths.get(id);
   if (wtPath) {
     const origCwd = worktreeOrigins.get(id) ?? wtPath;
+    const baseBranch = worktreeBases.get(id) ?? 'main';
     worktreePaths.delete(id);
     worktreeOrigins.delete(id);
+    worktreeBases.delete(id);
     // Ephemeral workers get a SAFETY-GATED teardown: never auto-remove a worktree
     // that holds unintegrated work. This sits INSIDE teardownPty so it covers ALL
-    // teardown routes — a worker that finished (controller kill), crashed, or was
-    // idle-reaped all land here. Normal agents keep the immediate force-remove.
+    // teardown routes — a worker or normal agent that finished, crashed, or was
+    // stopped all land here. No automatic path force-removes valuable work.
     const worker = liveWorkers.get(id);
     if (worker) {
       liveWorkers.delete(id);
       void finalizeWorkerWorktree(wtPath, origCwd, worker);
     } else {
-      void removeWorktree(origCwd, wtPath)
-        .then(r => { if (!r.ok) console.error('[worktree] removeWorktree failed:', r.error); })
-        .catch(e => console.error('[worktree] removeWorktree threw:', e));
+      void finalizeAgentWorktree(id, wtPath, origCwd, baseBranch);
     }
   }
   // A worker whose isolation failed (non-repo cwd) has no worktree to gate above —
@@ -485,6 +525,29 @@ function teardownPty(id: string): void {
     try { liveWebContents()?.send('hive:agentArchived', { id }); } catch { /* window torn down */ }
   }
   syncKeepAwake();
+}
+
+async function finalizeAgentWorktree(id: string, wtPath: string, origCwd: string, baseBranch: string): Promise<void> {
+  try {
+    const work = await worktreeHasUnintegratedWork(wtPath, baseBranch);
+    if (work.keep) {
+      preservedWorktrees.set(wtPath, {
+        workerId: id, wtPath, origCwd, baseBranch, scratchDir: null, preservedAt: Date.now()
+      });
+      informGod(
+        `[agent worktree preserved] ${id}`,
+        `Agent ${id} ended with local work (${work.detail}). Its worktree was preserved for explicit review. `
+        + `Use the Git view to inspect it; automatic force removal is disabled.`
+      );
+      return;
+    }
+    const removed = await removeWorktree(origCwd, wtPath);
+    if (!removed.ok) console.error('[worktree] safe remove failed');
+  } catch {
+    preservedWorktrees.set(wtPath, {
+      workerId: id, wtPath, origCwd, baseBranch, scratchDir: null, preservedAt: Date.now()
+    });
+  }
 }
 
 /** Send an inform to the god agent (the human's proxy). The ephemeral-worker
@@ -2622,6 +2685,7 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
           opts.cwd = wtPath;
           worktreePaths.set(opts.id, wtPath);
           worktreeOrigins.set(opts.id, origCwd);
+          worktreeBases.set(opts.id, baseBranch);
         } else {
           console.error('[worktree] addWorktree failed:', wt.error);
         }
@@ -3164,34 +3228,39 @@ ipcMain.handle('config:changeHome', async (_evt, payload: unknown) => {
 });
 
 // ─── IPC: filesystem (sandboxed to a root) ──────────────────────────────────
-ipcMain.handle('fs:listDir', (_evt, root: unknown, rel: unknown) => {
+ipcMain.handle('fs:listDir', (evt, root: unknown, rel: unknown) => {
   if (typeof root !== 'string' || typeof rel !== 'string') return { ok: false, error: 'invalid args' };
-  return listDir(root, rel);
+  const authorized = authorizeManagedRoot(evt, root);
+  return authorized ? listDir(authorized, rel) : { ok: false, error: 'unauthorized workspace' };
 });
-ipcMain.handle('fs:readFile', (_evt, root: unknown, rel: unknown) => {
+ipcMain.handle('fs:readFile', (evt, root: unknown, rel: unknown) => {
   if (typeof root !== 'string' || typeof rel !== 'string') return { ok: false, error: 'invalid args' };
-  return readFileText(root, rel);
+  const authorized = authorizeManagedRoot(evt, root);
+  return authorized ? readFileText(authorized, rel) : { ok: false, error: 'unauthorized workspace' };
 });
 // Raw bytes for files the text reader refuses (images). The renderer cannot
 // load them off disk itself — the CSP has no `file:` source and no file
 // protocol is registered — so the bytes come through here and become a `blob:`
 // URL on the other side. Same root confinement as every other fs handler.
-ipcMain.handle('fs:readBinary', (_evt, root: unknown, rel: unknown) => {
+ipcMain.handle('fs:readBinary', (evt, root: unknown, rel: unknown) => {
   if (typeof root !== 'string' || typeof rel !== 'string') return { ok: false, error: 'invalid args' };
-  return readFileBinary(root, rel);
+  const authorized = authorizeManagedRoot(evt, root);
+  return authorized ? readFileBinary(authorized, rel) : { ok: false, error: 'unauthorized workspace' };
 });
-ipcMain.handle('fs:writeFile', (_evt, root: unknown, rel: unknown, content: unknown) => {
+ipcMain.handle('fs:writeFile', (evt, root: unknown, rel: unknown, content: unknown) => {
   if (typeof root !== 'string' || typeof rel !== 'string' || typeof content !== 'string') {
     return { ok: false, error: 'invalid args' };
   }
-  return writeFileText(root, rel, content);
+  const authorized = authorizeManagedRoot(evt, root);
+  return authorized ? writeFileText(authorized, rel, content) : { ok: false, error: 'unauthorized workspace' };
 });
 // v0.3.4: existence check for the terminal ⌘-click markdown flow (metadata only).
-ipcMain.handle('fs:statAbs', (_evt, p: unknown) => {
+ipcMain.handle('fs:statAbs', (evt, p: unknown) => {
   if (typeof p !== 'string' || p.length > 4096 || p.includes('\0')) {
     return { exists: false, isFile: false, path: '' };
   }
-  return statAbs(p);
+  const authorized = authorizeManagedPath(evt, p);
+  return authorized ? statAbs(authorized.path, authorized.root) : { exists: false, isFile: false, path: '' };
 });
 
 /** Reveal a path in the OS file browser — Finder, Explorer, or whatever the
@@ -3209,98 +3278,115 @@ ipcMain.handle('fs:statAbs', (_evt, p: unknown) => {
  *  one — a directory has no default application to launch, so the execution
  *  argument above does not apply, and revealing a folder inside its parent is
  *  not what "open this folder" means to anyone. */
-ipcMain.handle('fs:revealPath', async (_evt, p: unknown) => {
+ipcMain.handle('fs:revealPath', async (evt, p: unknown) => {
   if (typeof p !== 'string' || !p.length || p.length > 4096 || p.includes('\0')) {
     return { ok: false, error: 'bad request' };
   }
-  const st = await statAbs(p);
+  const authorized = authorizeManagedPath(evt, p);
+  if (!authorized) return { ok: false, error: 'unauthorized workspace' };
+  const st = await statAbs(authorized.path, authorized.root);
   if (!st.exists) return { ok: false, error: 'not found' };
   if (st.isFile) { shell.showItemInFolder(st.path); return { ok: true }; }
   const err = await shell.openPath(st.path);
-  return err ? { ok: false, error: err } : { ok: true };
+  return err ? { ok: false, error: 'could not reveal path' } : { ok: true };
 });
 
 // ─── IPC: git ───────────────────────────────────────────────────────────────
-ipcMain.handle('git:isRepo', (_evt, cwd: unknown) => {
+ipcMain.handle('git:isRepo', (evt, cwd: unknown) => {
   if (typeof cwd !== 'string') return false;
-  return isRepo(cwd);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? isRepo(authorized) : false;
 });
 
 // The repo a cwd belongs to, following a linked worktree back to its main
 // checkout — the renderer groups the agent roster by this.
-ipcMain.handle('git:mainRepo', (_evt, cwd: unknown) => {
+ipcMain.handle('git:mainRepo', (evt, cwd: unknown) => {
   if (typeof cwd !== 'string' || !cwd) return null;
-  return mainRepoRoot(cwd);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? mainRepoRoot(authorized) : null;
 });
-ipcMain.handle('git:branch', (_evt, cwd: unknown) => {
+ipcMain.handle('git:branch', (evt, cwd: unknown) => {
   if (typeof cwd !== 'string') return { error: 'invalid cwd' };
-  return getBranch(cwd);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? getBranch(authorized) : { error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:status', (_evt, cwd: unknown) => {
+ipcMain.handle('git:status', (evt, cwd: unknown) => {
   if (typeof cwd !== 'string') return { error: 'invalid cwd' };
-  return getStatus(cwd);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? getStatus(authorized) : { error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:log', (_evt, cwd: unknown, n: unknown) => {
+ipcMain.handle('git:log', (evt, cwd: unknown, n: unknown) => {
   if (typeof cwd !== 'string') return { error: 'invalid cwd' };
   const count = typeof n === 'number' ? Math.min(500, Math.max(1, n)) : 50;
-  return getLog(cwd, count);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? getLog(authorized, count) : { error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:branches', (_evt, cwd: unknown) => {
+ipcMain.handle('git:branches', (evt, cwd: unknown) => {
   if (typeof cwd !== 'string') return { error: 'invalid cwd' };
-  return getBranches(cwd);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? getBranches(authorized) : { error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:aheadBehind', (_evt, cwd: unknown) => {
+ipcMain.handle('git:aheadBehind', (evt, cwd: unknown) => {
   if (typeof cwd !== 'string') return { error: 'invalid cwd' };
-  return getAheadBehind(cwd);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? getAheadBehind(authorized) : { error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:diff', (_evt, cwd: unknown, relPath: unknown) => {
+ipcMain.handle('git:diff', (evt, cwd: unknown, relPath: unknown) => {
   if (typeof cwd !== 'string' || typeof relPath !== 'string') {
     return { ok: false, error: 'invalid args' };
   }
-  return getDiff(cwd, relPath);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? getDiff(authorized, relPath) : { ok: false, error: 'unauthorized workspace' };
 });
 // ─── v0.3.4: history / compare / checkout (git visualization) ───────────────
-ipcMain.handle('git:logGraph', (_evt, cwd: unknown, n: unknown, skip: unknown) => {
+ipcMain.handle('git:logGraph', (evt, cwd: unknown, n: unknown, skip: unknown) => {
   if (typeof cwd !== 'string') return { error: 'invalid args' };
   const count = Math.min(500, Math.max(1, typeof n === 'number' ? n : 200));
   const off = Math.max(0, typeof skip === 'number' ? skip : 0);
-  return getLogGraph(cwd, count, off);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? getLogGraph(authorized, count, off) : { error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:commitFiles', (_evt, cwd: unknown, sha: unknown) => {
+ipcMain.handle('git:commitFiles', (evt, cwd: unknown, sha: unknown) => {
   if (typeof cwd !== 'string' || typeof sha !== 'string') return { error: 'invalid args' };
-  return getCommitFiles(cwd, sha);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? getCommitFiles(authorized, sha) : { error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:showFile', (_evt, cwd: unknown, rev: unknown, relPath: unknown) => {
+ipcMain.handle('git:showFile', (evt, cwd: unknown, rev: unknown, relPath: unknown) => {
   if (typeof cwd !== 'string' || typeof rev !== 'string' || typeof relPath !== 'string') {
     return { ok: false, error: 'invalid args' };
   }
-  return getFileAtRev(cwd, rev, relPath);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? getFileAtRev(authorized, rev, relPath) : { ok: false, error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:compareRefs', (_evt, cwd: unknown, base: unknown, head: unknown, mode: unknown) => {
+ipcMain.handle('git:compareRefs', (evt, cwd: unknown, base: unknown, head: unknown, mode: unknown) => {
   if (typeof cwd !== 'string' || typeof base !== 'string' || typeof head !== 'string') {
     return { error: 'invalid args' };
   }
-  return compareRefs(cwd, base, head, mode === 'two' ? 'two' : 'three');
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? compareRefs(authorized, base, head, mode === 'two' ? 'two' : 'three') : { error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:worktrees', (_evt, cwd: unknown) => {
+ipcMain.handle('git:worktrees', (evt, cwd: unknown) => {
   if (typeof cwd !== 'string') return { error: 'invalid args' };
-  return listWorktrees(cwd);
+  const authorized = authorizeManagedRoot(evt, cwd);
+  return authorized ? listWorktrees(authorized) : { error: 'unauthorized workspace' };
 });
-ipcMain.handle('git:checkout', async (_evt, cwd: unknown, ref: unknown, detach: unknown) => {
+ipcMain.handle('git:checkout', async (evt, cwd: unknown, ref: unknown, detach: unknown) => {
   if (typeof cwd !== 'string' || typeof ref !== 'string') return { ok: false, error: 'invalid args' };
+  const authorized = authorizeManagedRoot(evt, cwd);
+  if (!authorized) return { ok: false, error: 'unauthorized workspace' };
   // Guard: never swap files under an actively-working agent. Objective signal
   // owned by main — any live pty whose cwd sits in this tree and emitted output
   // in the last 10s is treated as mid-run. (Idle-but-open terminals are fine:
   // checkoutRef additionally requires a clean tree, and TUIs redraw on fs
   // changes gracefully.)
   const busy = ptyManager.list().find((p) =>
-    (p.cwd === cwd || p.cwd.startsWith(cwd.endsWith('/') ? cwd : `${cwd}/`)) &&
+    (p.cwd === authorized || p.cwd.startsWith(authorized + sep)) &&
     Date.now() - p.lastOutputAt < 10_000
   );
   if (busy) {
-    return { ok: false, error: `an agent is actively working in this repo (${busy.id}) — try again when it goes quiet` };
+    return { ok: false, error: 'an agent is actively working in this repo — try again when it goes quiet' };
   }
-  return checkoutRef(cwd, ref, detach === true);
+  return checkoutRef(authorized, ref, detach === true);
 });
 
 // ─── IPC: roster mirror (shared between dev and a packaged build) ───────────
@@ -3875,14 +3961,20 @@ ipcMain.handle('hive:textSearch', (_evt, query: unknown) => {
 });
 
 // ─── IPC: GitHub issue ingestion (gh CLI) ────────────────────────────────────
-ipcMain.handle('github:issues', (_evt, cwd: unknown) =>
-  typeof cwd === 'string' ? listIssues(cwd) : { ok: false, error: 'no cwd' }
-);
+ipcMain.handle('github:issues', async (evt, cwd: unknown) => {
+  const authorized = authorizeManagedRoot(evt, cwd);
+  if (!authorized) return { ok: false, error: 'unauthorized repository' };
+  const repo = await resolveGitHubRepo(authorized);
+  return repo ? listIssues(authorized, repo) : { ok: false, error: 'repository is not an allowed fork' };
+});
 
 // ─── IPC: GitHub CI status watcher (gh CLI) ──────────────────────────────────
-ipcMain.handle('github:ciRuns', (_evt, cwd: unknown) =>
-  typeof cwd === 'string' ? listCIRuns(cwd) : { ok: false, error: 'no cwd' }
-);
+ipcMain.handle('github:ciRuns', async (evt, cwd: unknown) => {
+  const authorized = authorizeManagedRoot(evt, cwd);
+  if (!authorized) return { ok: false, error: 'unauthorized repository' };
+  const repo = await resolveGitHubRepo(authorized);
+  return repo ? listCIRuns(authorized, repo) : { ok: false, error: 'repository is not an allowed fork' };
+});
 
 // ─── IPC: desktop notifications toggle ──────────────────────────────────────
 ipcMain.handle('app:setNotifications', (_evt, val) => writeConfig({ notifications: val === true }));

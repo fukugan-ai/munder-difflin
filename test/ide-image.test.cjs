@@ -170,7 +170,7 @@ test('path traversal out of the root is rejected', async () => {
     ]) {
       const res = await readFileBinary(root, rel);
       assert.equal(res.ok, false, `${rel} must not be readable`);
-      assert.equal(res.error, 'path escapes root');
+      assert.equal(res.error, 'path is unavailable or outside the authorized workspace');
     }
     // …while an absolute path INSIDE the root is still fine (safeJoin's rule).
     const inside = await readFileBinary(root, path.join(root, 'docs', 'shot.png'));
@@ -223,7 +223,7 @@ test('a missing file reports an error instead of throwing', async () => {
   try {
     const res = await readFileBinary(root, 'docs/nope.png');
     assert.equal(res.ok, false);
-    assert.match(res.error, /ENOENT/);
+    assert.equal(res.error, 'path is unavailable or outside the authorized workspace');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

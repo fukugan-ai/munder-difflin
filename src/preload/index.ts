@@ -523,7 +523,6 @@ export interface CommandHistoryEntry {
 export interface GHIssue {
   number: number;
   title: string;
-  body: string;
   url: string;
   labels: string[];
   assignees: string[];

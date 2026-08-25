@@ -1,28 +1,31 @@
 import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import { safeJoin } from './fs';
+import { resolveCommand } from './shellEnv';
+
+const SAFE_HOOKS_PATH = process.platform === 'win32' ? 'NUL' : '/dev/null';
+const GIT_ERROR = 'Git operation failed';
 
 /** Run git in `cwd` with `args`. Returns stdout text or an error. */
 function runGit(cwd: string, args: string[], timeoutMs = 8000): Promise<{
   ok: true; stdout: string;
 } | { ok: false; error: string }> {
   return new Promise((resolve) => {
-    const proc = spawn('git', args, { cwd });
+    const proc = spawn(resolveCommand('git'), ['-c', `core.hooksPath=${SAFE_HOOKS_PATH}`, ...args], { cwd });
     let stdout = '';
-    let stderr = '';
     const timer = setTimeout(() => {
       try { proc.kill('SIGKILL'); } catch { /* noop */ }
     }, timeoutMs);
     proc.stdout.on('data', d => { stdout += d.toString(); });
-    proc.stderr.on('data', d => { stderr += d.toString(); });
-    proc.on('error', e => {
+    proc.stderr.on('data', () => { /* deliberately not exposed across IPC */ });
+    proc.on('error', () => {
       clearTimeout(timer);
-      resolve({ ok: false, error: e.message });
+      resolve({ ok: false, error: GIT_ERROR });
     });
     proc.on('close', code => {
       clearTimeout(timer);
       if (code === 0) resolve({ ok: true, stdout });
-      else resolve({ ok: false, error: stderr.trim() || `git exited ${code}` });
+      else resolve({ ok: false, error: GIT_ERROR });
     });
   });
 }
@@ -250,12 +253,11 @@ export async function addWorktree(
   return { ok: false, error: fallback.error };
 }
 
-/** Best-effort removal of an agent's worktree. Forced so a dirty tree doesn't
- *  block teardown; failures are surfaced but callers may ignore them. */
+/** Remove a clean worktree. Never force: callers must preserve dirty/ahead work. */
 export async function removeWorktree(
   cwd: string, wtPath: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const res = await runGit(cwd, ['worktree', 'remove', '--force', wtPath]);
+  const res = await runGit(cwd, ['worktree', 'remove', wtPath]);
   if (res.ok) return { ok: true };
   return { ok: false, error: res.error };
 }
@@ -471,7 +473,7 @@ export async function checkoutRef(cwd: string, ref: string, detach: boolean): Pr
   if (!isSafeRev(ref)) return { ok: false, error: 'invalid revision' };
   const st = await getStatus(cwd);
   if ('error' in st) return { ok: false, error: `could not verify a clean tree: ${st.error}` };
-  const dirty = st.staged.length + st.unstaged.length;
+  const dirty = st.staged.length + st.unstaged.length + st.untracked.length;
   if (dirty > 0) {
     return { ok: false, error: `working tree has ${dirty} uncommitted change${dirty === 1 ? '' : 's'} — commit or stash first` };
   }
@@ -481,7 +483,7 @@ export async function checkoutRef(cwd: string, ref: string, detach: boolean): Pr
     if (/already checked out|already used by worktree/i.test(res.error)) {
       const wts = await listWorktrees(cwd);
       const holder = Array.isArray(wts) ? wts.find((w) => w.branch === ref.replace(/^refs\/heads\//, '')) : undefined;
-      return { ok: false, error: holder ? `'${ref}' is checked out in another worktree: ${holder.path}` : res.error };
+      return { ok: false, error: holder ? `'${ref}' is checked out in another worktree` : GIT_ERROR };
     }
     return { ok: false, error: res.error };
   }

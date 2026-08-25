@@ -1,5 +1,6 @@
-import { readdir, readFile, writeFile, stat } from 'node:fs/promises';
-import { isAbsolute, join, normalize, relative, resolve } from 'node:path';
+import { constants, lstatSync, realpathSync } from 'node:fs';
+import { lstat, open, readdir, realpath } from 'node:fs/promises';
+import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { imageMimeForPath } from '../shared/imageTypes';
 
@@ -19,6 +20,49 @@ export function safeJoin(root: string, rel: string): string | null {
   return absPath;
 }
 
+/** Exact-root capability check used by main-owned IPC allowlists. */
+export function authorizeRootFromAllowlist(requested: string, allowedRoots: readonly string[]): string | null {
+  try {
+    if (!requested || requested.includes('\0') || lstatSync(requested).isSymbolicLink()) return null;
+    const canonical = realpathSync(requested);
+    return allowedRoots.includes(canonical) ? canonical : null;
+  } catch { return null; }
+}
+
+function inside(root: string, candidate: string): boolean {
+  const rel = relative(root, candidate);
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+}
+
+/** Resolve a renderer-selected path without following symlinks at any component. */
+async function securePath(root: string, rel: string, allowMissingLeaf = false): Promise<string | null> {
+  const lexical = safeJoin(root, rel);
+  if (!lexical) return null;
+  try {
+    const rootStat = await lstat(root);
+    if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) return null;
+    const canonicalRoot = await realpath(root);
+    const relativeParts = relative(resolve(root), lexical).split(sep).filter(Boolean);
+    let cursor = canonicalRoot;
+    for (let i = 0; i < relativeParts.length; i++) {
+      cursor = join(cursor, relativeParts[i]);
+      try {
+        const s = await lstat(cursor);
+        if (s.isSymbolicLink()) return null;
+      } catch {
+        if (!(allowMissingLeaf && i === relativeParts.length - 1)) return null;
+      }
+    }
+    const boundaryTarget = allowMissingLeaf ? await realpath(dirname(cursor)) : await realpath(cursor);
+    return inside(canonicalRoot, boundaryTarget) ? cursor : null;
+  } catch {
+    return null;
+  }
+}
+
+const PATH_ERROR = 'path is unavailable or outside the authorized workspace';
+const IO_ERROR = 'file operation failed';
+
 export interface DirEntry {
   name: string;
   isDir: boolean;
@@ -29,13 +73,14 @@ export interface DirEntry {
 export async function listDir(root: string, rel: string): Promise<{
   ok: true; entries: DirEntry[]; path: string;
 } | { ok: false; error: string }> {
-  const abs = safeJoin(root, rel);
-  if (!abs) return { ok: false, error: 'path escapes root' };
+  const abs = await securePath(root, rel);
+  if (!abs) return { ok: false, error: PATH_ERROR };
   try {
     const names = await readdir(abs);
     const entries = await Promise.all(names.map(async (name): Promise<DirEntry> => {
       try {
-        const s = await stat(join(abs, name));
+        const s = await lstat(join(abs, name));
+        if (s.isSymbolicLink()) return { name, isDir: false, size: 0, mtime: 0 };
         return { name, isDir: s.isDirectory(), size: s.size, mtime: s.mtimeMs };
       } catch {
         return { name, isDir: false, size: 0, mtime: 0 };
@@ -47,7 +92,7 @@ export async function listDir(root: string, rel: string): Promise<{
     });
     return { ok: true, entries, path: abs };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, error: IO_ERROR };
   }
 }
 
@@ -56,19 +101,22 @@ const MAX_READ_BYTES = 2 * 1024 * 1024; // 2 MB
 export async function readFileText(root: string, rel: string): Promise<{
   ok: true; content: string; path: string; size: number;
 } | { ok: false; error: string }> {
-  const abs = safeJoin(root, rel);
-  if (!abs) return { ok: false, error: 'path escapes root' };
+  const abs = await securePath(root, rel);
+  if (!abs) return { ok: false, error: PATH_ERROR };
   try {
-    const s = await stat(abs);
+    const handle = await open(abs, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const s = await handle.stat();
     if (s.size > MAX_READ_BYTES) {
+      await handle.close();
       return { ok: false, error: `file too large (${(s.size / 1024 / 1024).toFixed(1)} MB)` };
     }
-    const buf = await readFile(abs);
+    const buf = await handle.readFile();
+    await handle.close();
     // Reject obvious binary files based on null-byte sniff
     if (buf.includes(0)) return { ok: false, error: 'binary file (not displayable)' };
     return { ok: true, content: buf.toString('utf8'), path: abs, size: s.size };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, error: IO_ERROR };
   }
 }
 
@@ -102,18 +150,21 @@ const MAX_BINARY_READ_BYTES = 10 * 1024 * 1024; // 10 MB
 export async function readFileBinary(root: string, rel: string, maxBytes = MAX_BINARY_READ_BYTES): Promise<{
   ok: true; bytes: Uint8Array<ArrayBuffer>; mime: string; path: string; size: number;
 } | { ok: false; error: string }> {
-  const abs = safeJoin(root, rel);
-  if (!abs) return { ok: false, error: 'path escapes root' };
+  const abs = await securePath(root, rel);
+  if (!abs) return { ok: false, error: PATH_ERROR };
   try {
-    const s = await stat(abs);
+    const handle = await open(abs, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const s = await handle.stat();
     // Directories and FIFOs are the trap here: readFile on a directory throws
     // (fine) but on a FIFO it BLOCKS forever with no size to check against, which
     // would hang the IPC call and, with it, the renderer's loading state.
-    if (!s.isFile()) return { ok: false, error: 'not a regular file' };
+    if (!s.isFile()) { await handle.close(); return { ok: false, error: 'not a regular file' }; }
     if (s.size > maxBytes) {
+      await handle.close();
       return { ok: false, error: `file too large (${(s.size / 1024 / 1024).toFixed(1)} MB)` };
     }
-    const buf = await readFile(abs);
+    const buf = await handle.readFile();
+    await handle.close();
     if (buf.byteLength > maxBytes) {
       // The file grew between stat and read. Rare, but the cap is a memory
       // guarantee for the renderer, not an advisory.
@@ -135,20 +186,26 @@ export async function readFileBinary(root: string, rel: string, maxBytes = MAX_B
       size: s.size
     };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, error: IO_ERROR };
   }
 }
 
 export async function writeFileText(root: string, rel: string, content: string): Promise<{
   ok: true; path: string;
 } | { ok: false; error: string }> {
-  const abs = safeJoin(root, rel);
-  if (!abs) return { ok: false, error: 'path escapes root' };
+  const abs = await securePath(root, rel, true);
+  if (!abs) return { ok: false, error: PATH_ERROR };
   try {
-    await writeFile(abs, content, 'utf8');
+    const handle = await open(
+      abs,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW,
+      0o600
+    );
+    await handle.writeFile(content, 'utf8');
+    await handle.close();
     return { ok: true, path: abs };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  } catch {
+    return { ok: false, error: IO_ERROR };
   }
 }
 
@@ -217,13 +274,15 @@ export function normalizeHiveHome(
  *  ⌘-click markdown flow). `~/` is expanded here (the renderer doesn't know
  *  the home dir). Read-only metadata: returns whether a regular file exists and
  *  the normalized absolute path; never file contents. */
-export async function statAbs(p: string): Promise<{ exists: boolean; isFile: boolean; path: string }> {
+export async function statAbs(p: string, authorizedRoot?: string): Promise<{ exists: boolean; isFile: boolean; path: string }> {
   const abs = expandTilde(p);
-  if (!isAbsolute(abs)) return { exists: false, isFile: false, path: p };
+  if (!isAbsolute(abs) || !authorizedRoot) return { exists: false, isFile: false, path: '' };
   try {
-    const s = await stat(abs);
-    return { exists: true, isFile: s.isFile(), path: abs };
+    const secured = await securePath(authorizedRoot, abs);
+    if (!secured) return { exists: false, isFile: false, path: '' };
+    const s = await lstat(secured);
+    return { exists: true, isFile: s.isFile(), path: secured };
   } catch {
-    return { exists: false, isFile: false, path: abs };
+    return { exists: false, isFile: false, path: '' };
   }
 }
