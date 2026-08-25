@@ -213,7 +213,7 @@ If `node-pty` fails to load after an Electron upgrade, re-run `npm install`.
 
 ## Dioxus Web preview
 
-The `feat/dioxus-web` branch contains the first slice of a local single-user Web app for headless WSL.
+The `feat/dioxus-web` branch contains a local single-user Web app for headless WSL.
 Its default bind address is `127.0.0.1:5080` inside WSL.
 Once running, it opens from the Windows browser at `http://localhost:5080` without launching the Electron UI or requiring an X server.
 
@@ -239,14 +239,21 @@ Open this URL in the Windows browser:
 http://localhost:5080
 ```
 
-The current migration slice provides only the Japanese dashboard and Web server/PostgreSQL status.
-The Electron agent, PTY, filesystem, git, GitHub, task, and other features have not yet been ported to the Web app.
-The Web preview does not have full feature parity; continue to use the Electron app for those features.
+The Web app integrates the Japanese office and Command Center shown in the demo video, configuration and onboarding, connections, workspace filesystem, git and read-only GitHub views, Hive tasks, memory and skills, voice actions, agent management, and a real PTY terminal.
+The terminal supports input, resizing, termination, restoration, and queued messages. Agents with isolation enabled receive a server-managed git worktree.
+Actions that depend on an external service or AI provider report missing configuration when the required credential or executable is unavailable.
+
+This branch remains a preview.
+It does not replace every Electron feature or its distribution formats. Browser differences across Windows, macOS, and Linux, live external-service connections, and operation from another PC have not received final verification.
 
 Only the server process started by `npm run dev:web` reads the PostgreSQL `MD_PG_*` environment variables.
 Do not pass those credentials to WASM or the browser.
 If configuration is missing, the Web app starts in degraded mode and reports durable writes as disabled (`writes: false`).
-The dashboard and status view remain available in that state.
+The office and status view remain available in that state, but configuration changes, agents, queues, and history that require persistence cannot run.
+
+Press `Ctrl+C` in the terminal that started the server to shut it down.
+The server stops accepting new requests, stops connection listeners and PTYs, waits a bounded time for in-flight requests, and then closes PostgreSQL connections.
+The Settings action labeled “サーバーを安全に終了” uses the same shutdown path.
 
 ### Open the preview from another PC on the LAN
 
@@ -347,8 +354,22 @@ netsh interface portproxy delete v4tov4 listenport=5080 listenaddress=0.0.0.0
 Remove-NetFirewallRule -Name "MunderDifflinWeb5080"
 ```
 
+To encrypt LAN traffic with TLS, provide PEM files for the server certificate and private key, then use the HTTPS command.
+The server exits before opening the port when either file is missing.
+
+```bash
+export MD_WEB_TLS_CERT_PATH='/absolute/path/to/server-cert.pem'
+export MD_WEB_TLS_KEY_PATH='/absolute/path/to/server-key.pem'
+npm run dev:web:lan:https
+```
+
+Open `https://<Windows-LAN-IP>:5080` from the other PC.
+Include the LAN IP or host name in the certificate and trust its issuer on the client so the browser can validate it.
+
 The LAN command exposes the Web preview to the LAN without authentication.
-Only the dashboard and status view are exposed today, but the impact becomes much greater if agent, PTY, or file operations are later ported and exposed the same way.
+HTTPS encrypts transport, but it does not add user authentication.
+That surface includes agent, PTY, filesystem, git, and connection-setting operations.
+A user on another PC can operate registered repositories and processes on the computer running the server.
 Use it only on a trusted Private network, and remove the firewall rules and port proxy when they are no longer needed.
 
 ### Prepare PostgreSQL

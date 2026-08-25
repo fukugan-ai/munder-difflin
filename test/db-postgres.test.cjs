@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const loadTs = require('./load-ts.cjs');
 const { PersistStore, consumePgConfig, clampLimit } = loadTs('src/main/db.ts');
+const { applyMigrations, loadOrderedMigrations } = require('../tools/db-migrate.cjs');
 
 const env = () => ({ MD_PG_HOST:'localhost', MD_PG_PORT:'5432', MD_PG_DATABASE:'app', MD_PG_USER:'app', MD_PG_PASSWORD:'secret', MD_PG_NAMESPACE:'operator-1' });
 
@@ -16,7 +17,7 @@ function mockPool(options = {}) {
     async connect() { if (options.connectError) throw new Error('offline'); calls.push({ source:'pool', sql:'connect' }); return client; },
     async query(sql, values) {
       calls.push({ source:'pool', sql, values });
-      if (sql.includes('schema_migrations')) return { rows:[{ version: options.version ?? 1 }], rowCount:1 };
+      if (sql.includes('schema_migrations')) return { rows:[{ version: options.version ?? 2 }], rowCount:1 };
       if (sql.includes('SELECT key, value')) return { rows: options.kv ?? [], rowCount:0 };
       if (options.retryOnce && sql.includes('INSERT INTO') && !options.retried) { options.retried=true; const e=new Error('retry'); e.code='40001'; throw e; }
       if (sql.includes('command_history') && sql.includes('SELECT')) return { rows:[], rowCount:0 };
@@ -41,7 +42,7 @@ test('password and all MD_PG connection values are removed from inherited env', 
 test('unreachable and schema mismatch degrade without fallback', async () => {
   const offline=mockPool({connectError:true});
   assert.equal((await new PersistStore({env:env(),pool:offline.pool}).open()).code,'unreachable');
-  const old=mockPool({version:0});
+  const old=mockPool({version:1});
   assert.equal((await new PersistStore({env:env(),pool:old.pool}).open()).code,'schema_mismatch');
 });
 
@@ -84,10 +85,19 @@ test('unreadable remote CA degrades without constructor throw', async () => {
 test('namespace reset is transactional and close drains before lock release and pool end', async () => {
   const m=mockPool(); const store=new PersistStore({env:env(),pool:m.pool}); await store.open();
   store.setKv('a',1); assert.equal(await store.resetNamespace(),true); await store.close();
-  for (const table of ['cost_ledger','command_history','kv']) {
+  for (const table of [
+    'web_trigger_history','web_event_stream_heads','web_durable_records','web_app_config',
+    'cost_ledger','command_history','kv','legacy_imports'
+  ]) {
     const call=m.calls.find((c)=>c.sql.includes(`DELETE FROM munder_difflin.${table}`));
     assert.deepEqual(call.values,['operator-1']);
   }
+  const begin=m.calls.findIndex((c)=>c.sql==='BEGIN');
+  const firstDelete=m.calls.findIndex((c)=>c.sql.includes('DELETE FROM munder_difflin.web_trigger_history'));
+  const lastDelete=m.calls.findIndex((c)=>c.sql.includes('DELETE FROM munder_difflin.legacy_imports'));
+  const commit=m.calls.findIndex((c)=>c.sql==='COMMIT');
+  assert.ok(begin < firstDelete && firstDelete < lastDelete && lastDelete < commit);
+  assert.equal(m.calls.filter((c)=>c.sql==='connect').length,1);
   const insert=m.calls.findIndex((c)=>c.sql.includes('INSERT INTO munder_difflin.kv'));
   const unlock=m.calls.findIndex((c)=>c.sql.includes('pg_advisory_unlock'));
   const end=m.calls.findIndex((c)=>c.sql==='end');
@@ -107,4 +117,14 @@ test('lifetime SQL preserves append identity order, not sample timestamp order',
   const call=m.calls.find((c)=>c.sql.includes('WITH ordered AS'));
   assert.match(call.sql,/ORDER BY id/);
   assert.doesNotMatch(call.sql,/ORDER BY occurred_at/);
+});
+
+test('migration loader applies every forward migration in version order', async () => {
+  const migrations=loadOrderedMigrations();
+  assert.deepEqual(migrations.map((migration)=>migration.name),['001_initial.sql','002_web_parity.sql']);
+  const applied=[];
+  await applyMigrations({query:async(sql)=>{applied.push(sql);return {rows:[],rowCount:0};}},migrations);
+  assert.equal(applied.length,2);
+  assert.match(applied[0],/schema_migrations\(version\) VALUES \(1\)/);
+  assert.match(applied[1],/schema_migrations\(version\) VALUES \(2\)/);
 });

@@ -26,7 +26,7 @@
   --color-focus: #3d2e4a;
 
   --font-display: "Press Start 2P", ui-monospace, monospace;
-  --font-ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-ui: "Noto Sans JP", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   --space-0: 0;
@@ -110,7 +110,8 @@
   }
 }
 
-.app-shell[data-theme="light"] {
+.app-shell[data-theme="light"],
+.office-domain[data-theme="light"] {
   --color-cream-50: #fffdf5;
   --color-cream-100: #fff8e7;
   --color-cream-200: #f4e9c7;
@@ -135,7 +136,8 @@
   --color-accent-ink: #1a1320;
 }
 
-.app-shell[data-theme="dark"] {
+.app-shell[data-theme="dark"],
+.office-domain[data-theme="dark"] {
   --color-cream-50: #17171b;
   --color-cream-100: #1d1d22;
   --color-cream-200: #26262c;

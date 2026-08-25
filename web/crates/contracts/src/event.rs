@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{HealthSnapshot, PersistenceStatus};
+use crate::{DomainInvalidated, HealthSnapshot, PersistenceStatus};
 
 /// Event emitted by the local Dioxus service.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -8,6 +8,7 @@ use crate::{HealthSnapshot, PersistenceStatus};
 pub enum AppEvent {
     HealthUpdated(HealthSnapshot),
     PersistenceChanged(PersistenceStatus),
+    DomainInvalidated(DomainInvalidated),
 }
 
 /// Ordered event stream item shared with the browser client.

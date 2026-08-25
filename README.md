@@ -148,7 +148,7 @@ Electronの更新後に`node-pty`を読み込めない場合は、`npm install`�
 
 ## Dioxus Web版のプレビュー
 
-`feat/dioxus-web`ブランチには、headless WSLで使うローカル単独利用向けWeb版の最初のスライスがあります。
+`feat/dioxus-web`ブランチには、headless WSLで使うローカル単独利用向けWeb版があります。
 既定の待受先はWSL内の`127.0.0.1:5080`です。
 起動できれば、Windowsのブラウザーから`http://localhost:5080`を開けるため、Electronの画面とXサーバーは不要です。
 
@@ -174,14 +174,21 @@ Windowsのブラウザーで次のURLを開きます。
 http://localhost:5080
 ```
 
-現在の移植スライスで使えるのは、日本語のdashboardとWebサーバーおよびPostgreSQLの状態表示です。
-Electron版のエージェント、PTY、ファイル、git、GitHub、タスクなどの機能は、まだWeb版へ移植されていません。
-完全な機能互換ではないため、これらの機能には引き続きElectron版を使います。
+Web版には、動画版に合わせた日本語のofficeとCommand Center、設定とonboarding、接続、workspaceのfile、git、GitHub読取、Hive task、memoryとskill、音声操作、agent管理と実PTY terminalを統合しています。
+terminalは入力、resize、終了、復元、queueに対応し、isolateを有効にしたagentにはserver管理のgit worktreeを割り当てます。
+外部serviceやAI providerを使う操作は、対応するcredentialや実行toolがない場合に設定不足を明示します。
+
+このbranchはpreviewです。
+Electron版の全機能と配布形式を置き換えるものではなく、Windows、macOS、Linuxのbrowser差、外部serviceとの実接続、複数PCからの操作はまだ最終検証していません。
 
 PostgreSQLの`MD_PG_*`環境変数は、`npm run dev:web`が起動するserver processだけが読みます。
 WASMとブラウザーへ認証情報を渡さないでください。
 設定が不足している場合、Web版はdegraded状態で起動し、永続化writeは無効（`writes: false`）として表示されます。
-この状態でもdashboardとstatusは確認できます。
+この状態でもofficeとstatusは確認できますが、永続化が必要な設定変更、agent、queue、履歴は実行できません。
+
+終了するときは、起動したterminalで`Ctrl+C`を押します。
+serverは新しいrequestの受付を止め、接続listenerとPTYを停止し、処理中のrequestを一定時間待ってからPostgreSQL接続を閉じます。
+設定画面の「サーバーを安全に終了」も同じ終了処理を使います。
 
 ### 別のPCからLANで開く
 
@@ -282,8 +289,22 @@ netsh interface portproxy delete v4tov4 listenport=5080 listenaddress=0.0.0.0
 Remove-NetFirewallRule -Name "MunderDifflinWeb5080"
 ```
 
+LAN上の通信をTLSで暗号化する場合は、server証明書と秘密鍵のPEM fileを指定してHTTPS用commandを使います。
+どちらかのfileがない場合、serverはportを開く前に終了します。
+
+```bash
+export MD_WEB_TLS_CERT_PATH='/absolute/path/to/server-cert.pem'
+export MD_WEB_TLS_KEY_PATH='/absolute/path/to/server-key.pem'
+npm run dev:web:lan:https
+```
+
+別のPCでは`https://<Windows-LAN-IP>:5080`を開きます。
+browserが証明書を信頼できるように、利用するLAN IPまたはhost名を証明書へ含め、発行元をclient側で信頼してください。
+
 LAN用commandは認証なしでWeb版をLANへ公開します。
-現在公開されるのはdashboardとstatusだけですが、将来agent、PTY、file操作を移植した状態で同じ公開方法を使うと影響が大きくなります。
+HTTPSは通信を暗号化しますが、利用者認証を追加しません。
+公開範囲にはagent、PTY、file、git、接続設定などの操作が含まれます。
+別のPCからの利用者は、serverを動かすPC上の登録済みrepositoryとprocessを操作できます。
 信頼できるPrivate networkでだけ使い、不要になったfirewall ruleとportproxyは削除してください。
 
 ### PostgreSQLの準備

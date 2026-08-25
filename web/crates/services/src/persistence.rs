@@ -11,7 +11,7 @@ use tokio::time::timeout;
 const DEFAULT_PORT: u16 = 5432;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(4);
 const QUERY_TIMEOUT: Duration = Duration::from_secs(5);
-const EXPECTED_SCHEMA_VERSION: i32 = 1;
+const EXPECTED_SCHEMA_VERSION: i32 = 2;
 const SCHEMA_QUERY: &str =
     "SELECT COALESCE(MAX(version), 0)::int FROM munder_difflin.schema_migrations";
 

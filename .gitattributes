@@ -1,0 +1,2 @@
+web/app/assets/domains/fs_git_ide/monaco/** -whitespace
+web/app/src/components/domains/office_ui/assets/pixi.min.js -whitespace

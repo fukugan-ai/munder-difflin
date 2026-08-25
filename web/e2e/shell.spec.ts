@@ -19,17 +19,9 @@ async function openShell(page: Page) {
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
 
   await expect(page).toHaveTitle("Munder Difflin");
-  await expect(page.getByText("MUNDER DIFFLIN", { exact: true })).toBeVisible();
-  await expect(page.getByText("ローカルWeb版", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "オフィス", level: 1 })).toBeVisible();
-
-  const serverStatus = page.locator(".health-list__row").filter({ hasText: "Webサーバー" });
-  const postgresStatus = page.locator(".health-list__row").filter({ hasText: "PostgreSQL" });
-
-  await expect(serverStatus).toBeVisible();
-  await expect(serverStatus.getByRole("status")).toBeVisible();
-  await expect(postgresStatus).toBeVisible();
-  await expect(postgresStatus.getByRole("status")).toBeVisible();
+  await expect(page.locator(".office-titlebar")).toBeVisible();
+  await expect(page.getByLabel("Munder Difflin")).toBeVisible();
+  await expect(page.getByRole("application", { name: "AIチームのオフィスフロア" })).toBeVisible();
 }
 
 test("ローカルWebシェルがXなしで表示され、キーボードフォーカスが見える", async ({ page }) => {
@@ -87,12 +79,33 @@ test("システムのライト・ダーク設定を反映する", async ({ page 
   await page.emulateMedia({ colorScheme: "light" });
   await openShell(page);
   await expect.poll(() => page.evaluate(() => matchMedia("(prefers-color-scheme: light)").matches)).toBe(true);
-  const lightBackground = await page.locator(".app-shell").evaluate((element) => getComputedStyle(element).backgroundColor);
+  const lightBackground = await page.locator(".office-domain").evaluate((element) => getComputedStyle(element).backgroundColor);
 
   await page.emulateMedia({ colorScheme: "dark" });
   await expect.poll(() => page.evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches)).toBe(true);
-  const darkBackground = await page.locator(".app-shell").evaluate((element) => getComputedStyle(element).backgroundColor);
+  const darkBackground = await page.locator(".office-domain").evaluate((element) => getComputedStyle(element).backgroundColor);
 
   expect(darkBackground).not.toBe(lightBackground);
+  expect(errors).toEqual([]);
+});
+
+test("日本語fontとproduct versionを同一originから読み込む", async ({ page, request }) => {
+  const errors = collectPageErrors(page);
+  await openShell(page);
+
+  const font = await page.evaluate(async () => {
+    await document.fonts.ready;
+    const family = getComputedStyle(document.body).fontFamily;
+    return {
+      family,
+      loaded: document.fonts.check('16px "Noto Sans JP"', "日本語の表示確認"),
+    };
+  });
+  expect(font.family.split(",")[0]?.replaceAll('"', "").trim()).toBe("Noto Sans JP");
+  expect(font.loaded).toBe(true);
+
+  const response = await request.get(`${baseUrl}/api/health`);
+  expect(response.ok()).toBe(true);
+  expect((await response.json()).app_version).toBe("0.4.5");
   expect(errors).toEqual([]);
 });

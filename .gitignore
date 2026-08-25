@@ -12,8 +12,13 @@ dist/
 .codex-task/
 .task-cache/
 .task-tools/
+.task-tmp/
+.task-work/
+web/.task-work/
 web/target/
+web/crates/*/target/
 web/dist/
+web/app/assets/vendor/
 
 # signing / notarization secrets — NEVER commit these
 *.p8

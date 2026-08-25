@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 
-use super::dashboard::{Dashboard, HealthViewState};
+use dioxus_router::{Link, Outlet};
+
+use crate::routes::{AppRoute, nav_items};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum ThemePreference {
@@ -44,7 +46,7 @@ impl ThemePreference {
 }
 
 #[component]
-pub(crate) fn AppShell(health: HealthViewState, on_refresh: EventHandler<()>) -> Element {
+pub(crate) fn AppShell() -> Element {
     let mut theme = use_signal(|| ThemePreference::System);
     let current_theme = *theme.read();
 
@@ -79,35 +81,32 @@ pub(crate) fn AppShell(health: HealthViewState, on_refresh: EventHandler<()>) ->
             div { class: "app-layout",
                 nav { class: "sidebar", aria_label: "主要メニュー",
                     p { class: "sidebar__label", "ワークスペース" }
-                    a {
-                        class: "sidebar__item is-active",
-                        href: "#office-title",
-                        aria_current: "page",
-                        span { aria_hidden: "true", "▦" }
-                        span { "オフィス" }
-                    }
-                    for (label, icon) in [
-                        ("ターミナル", ">_"),
-                        ("タスク", "✓"),
-                        ("確認事項", "!"),
-                        ("トリガー", "◷"),
-                        ("履歴", "≡"),
-                        ("記憶", "✦"),
-                        ("ワーカー", "⚙"),
-                    ] {
-                        button {
-                            class: "sidebar__item",
-                            r#type: "button",
-                            disabled: true,
-                            "data-ui-state": "disabled",
-                            title: "今後の移植で利用可能になります",
-                            span { aria_hidden: "true", {icon} }
-                            span { {label} }
+                    for item in nav_items() {
+                        if item.enabled {
+                            Link {
+                                class: "sidebar__item",
+                                active_class: "is-active",
+                                to: item.route,
+                                span { aria_hidden: "true", {item.icon} }
+                                span { {item.label} }
+                            }
+                        } else {
+                            button {
+                                class: "sidebar__item",
+                                r#type: "button",
+                                disabled: true,
+                                "data-ui-state": "disabled",
+                                title: "今後の移植で利用可能になります",
+                                span { aria_hidden: "true", {item.icon} }
+                                span { {item.label} }
+                            }
                         }
                     }
                 }
 
-                Dashboard { health, on_refresh }
+                main { id: "main-content", class: "route-main",
+                    Outlet::<AppRoute> {}
+                }
             }
         }
     }

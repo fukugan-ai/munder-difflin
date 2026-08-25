@@ -1,6 +1,4 @@
 /* Hallmark · preservation: Dunder Mifflin office shell · pre-emit critique: P5 H5 E4 S5 R5 V3 */
-@import "./tokens.css";
-
 *,
 *::before,
 *::after {
@@ -37,6 +35,41 @@ button:focus-visible,
 a:focus-visible {
   outline: var(--focus-width) solid var(--color-focus);
   outline-offset: var(--focus-offset);
+}
+
+.command-center-compact {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.command-center-compact h2,
+.command-center-compact p,
+.command-center-compact dl,
+.command-center-compact ul {
+  margin: 0;
+}
+
+.command-center-compact__list {
+  display: grid;
+  max-height: 22rem;
+  gap: var(--space-2);
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.command-center-compact__metrics {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+}
+
+.command-center-compact__metrics dd {
+  min-width: 0;
+  text-align: end;
+  overflow-wrap: anywhere;
 }
 
 .app-shell {
@@ -118,6 +151,23 @@ a:focus-visible {
   display: grid;
   min-height: calc(100dvh - var(--header-height));
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+}
+
+.route-main,
+.route-surface {
+  min-width: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .sidebar {

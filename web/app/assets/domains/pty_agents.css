@@ -1,0 +1,439 @@
+/* Hallmark · genre: existing product UI · tone: operational · anchor: inherited Dunder Mifflin tokens
+ * macrostructure: roster-workspace-hire · pre-emit critique: P5 H5 E5 S5 R5 V4
+ * states: default · hover · focus · active · disabled · loading · error · success
+ * contrast: pass (40–41) · nav/footer: inherited · slop: pass (42–49) · mobile: pass (34, 49–57)
+ */
+
+.pty-agents {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-4);
+  color: var(--color-ink-900);
+}
+
+.pty-agents__header,
+.pty-agents__roster-heading,
+.pty-terminal__header,
+.pty-terminal__actions {
+  display: flex;
+  min-width: var(--space-0);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pty-agents h1,
+.pty-agents h2,
+.pty-agents p {
+  margin: var(--space-0);
+}
+
+.pty-agents h1,
+.pty-agents h2 {
+  overflow-wrap: anywhere;
+  font-style: normal;
+}
+
+.pty-agents h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  line-height: var(--line-display);
+}
+
+.pty-agents h2 {
+  font-size: var(--text-body);
+  line-height: var(--line-heading);
+}
+
+.pty-agents__header p,
+.pty-terminal__header p,
+.pty-agents__hire-copy p,
+.pty-agents__empty p {
+  max-width: 65ch;
+  color: var(--color-ink-500);
+  font-size: var(--text-body-sm);
+}
+
+.pty-agents__notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--rule-hairline) solid var(--color-coral);
+  background: var(--color-coral-light);
+  color: var(--color-ink-900);
+}
+
+.pty-agents__layout {
+  display: grid;
+  min-width: var(--space-0);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.pty-agents__roster,
+.pty-agents__workspace,
+.pty-agents__hire {
+  min-width: var(--space-0);
+  border: var(--rule-hairline) solid var(--color-ink-300);
+  background: var(--color-paper-100);
+  color: var(--color-ink-900);
+  box-shadow: var(--shadow-hard);
+}
+
+.pty-agents__roster,
+.pty-agents__hire {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.pty-agents__agent-list,
+.pty-agents__restore {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.pty-agent-card {
+  display: flex;
+  width: 100%;
+  min-height: var(--control-height);
+  min-width: var(--space-0);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--rule-hairline) solid var(--color-ink-300);
+  border-radius: var(--radius-sm);
+  background: var(--color-cream-50);
+  color: var(--color-ink-900);
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.pty-agent-card.is-selected,
+.pty-agent-card[data-ui-state="success"] {
+  background: var(--color-sky-light);
+  color: var(--color-ink-900);
+}
+
+.pty-agent-card:active,
+.pty-agent-card[data-ui-state="active"] {
+  transform: translateY(var(--rule-hairline));
+}
+
+.pty-agent-card:disabled,
+.pty-agent-card[data-ui-state="disabled"] {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+.pty-agent-card--restorable {
+  flex-wrap: wrap;
+  cursor: default;
+}
+
+.pty-agent-card--restorable > span {
+  flex: 1 1 100%;
+  overflow-wrap: anywhere;
+  color: var(--color-ink-500);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+}
+
+.pty-agent-card__status {
+  width: var(--badge-dot);
+  height: var(--badge-dot);
+  flex: 0 0 auto;
+  border: var(--rule-hairline) solid var(--color-ink-700);
+  border-radius: var(--radius-round);
+  background: var(--color-ink-300);
+}
+
+.pty-agent-card__status[data-status="idle"] { background: var(--color-mint); }
+.pty-agent-card__status[data-status="working"] { background: var(--color-sky); }
+.pty-agent-card__status[data-status="blocked"] { background: var(--color-lemon); }
+.pty-agent-card__status[data-status="looping"] { background: var(--color-coral); }
+
+.pty-agent-card__copy {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-1);
+}
+
+.pty-agent-card__copy strong,
+.pty-agent-card__copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pty-agent-card__copy small {
+  color: var(--color-ink-500);
+}
+
+.pty-agents__workspace {
+  min-height: 32rem;
+}
+
+.pty-agents__empty {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-5);
+}
+
+.pty-agents__empty--workspace {
+  min-height: 32rem;
+  place-content: center;
+  padding-inline: var(--space-4);
+  text-align: center;
+}
+
+.pty-terminal {
+  display: grid;
+  min-height: 32rem;
+  grid-template-rows: auto clamp(16rem, 42vh, 28rem) auto auto;
+  background: var(--color-paper-100);
+  color: var(--color-ink-900);
+}
+
+.pty-terminal__header {
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  border-block-end: var(--rule-hairline) solid var(--color-ink-300);
+}
+
+.pty-terminal__header p {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+}
+
+.pty-terminal__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pty-terminal__surface {
+  position: relative;
+  min-height: var(--space-0);
+  min-width: var(--space-0);
+  overflow: hidden;
+  background: var(--color-ink-900);
+  color: var(--color-paper-100);
+}
+
+.pty-terminal__xterm,
+.pty-terminal__fallback {
+  font-family: "JetBrains Mono", "BIZ UDGothic", "Noto Sans Mono CJK JP", "Noto Sans CJK JP",
+    "Yu Gothic", Meiryo, ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+.pty-terminal__xterm[data-xterm-state="mounted"] {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: var(--space-0);
+  padding: var(--space-2);
+}
+
+.pty-terminal__xterm[data-xterm-state="mounted"] + .pty-terminal__fallback {
+  display: none;
+}
+
+.pty-terminal__xterm[data-xterm-state="fallback"] {
+  display: none;
+}
+
+.pty-terminal__fallback {
+  height: 100%;
+  min-height: 100%;
+  margin: var(--space-0);
+  padding: var(--space-3);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: var(--text-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.pty-terminal__composer {
+  padding: var(--space-3);
+  border-block-start: var(--rule-hairline) solid var(--color-ink-300);
+}
+
+.pty-terminal__send {
+  margin: var(--space-0) var(--space-3) var(--space-3);
+}
+
+.pty-agents__hire {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.pty-agents__hire-fields {
+  display: grid;
+  min-width: var(--space-0);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.pty-agent__field {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-1);
+  color: var(--color-ink-700);
+  font-size: var(--text-body-sm);
+}
+
+.pty-agent__field small {
+  min-height: 1lh;
+  color: var(--color-ink-500);
+}
+
+.pty-agent__check {
+  display: inline-flex;
+  min-height: var(--control-height);
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-ink-700);
+  cursor: pointer;
+}
+
+.pty-agent__check input {
+  width: var(--space-4);
+  height: var(--space-4);
+  accent-color: var(--color-sky);
+}
+
+.pty-agent__check input:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.pty-agent__input,
+.pty-agent__button {
+  min-height: var(--control-height);
+  border: var(--rule-hairline) solid var(--color-ink-300);
+  border-radius: var(--radius-sm);
+  outline: var(--focus-width) solid transparent;
+  outline-offset: var(--focus-offset);
+  font: inherit;
+}
+
+.pty-agent__input {
+  width: 100%;
+  min-width: var(--space-0);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-cream-50);
+  color: var(--color-ink-900);
+}
+
+.pty-agent__input--composer {
+  min-height: 6rem;
+  resize: vertical;
+  font-family: var(--font-mono);
+}
+
+.pty-agent__input:focus-visible,
+.pty-agent__button:focus-visible,
+.pty-agent-card:focus-visible {
+  outline-color: var(--color-focus);
+}
+
+.pty-agent__input:disabled,
+.pty-agent__input[data-ui-state="disabled"] {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+.pty-agent__input[data-ui-state="loading"] { opacity: var(--opacity-loading); }
+.pty-agent__input[data-ui-state="error"] { border-color: var(--color-coral); }
+.pty-agent__input[data-ui-state="success"] { border-color: var(--color-mint); }
+
+.pty-agent__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-100);
+  color: var(--color-ink-900);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.pty-agent__button--primary,
+.pty-agent__button[data-ui-state="success"] {
+  background: var(--color-lemon);
+  color: var(--color-accent-ink);
+}
+
+.pty-agent__button--quiet { background: var(--color-cream-50); }
+
+.pty-agent__button--danger,
+.pty-agent__button[data-ui-state="error"] {
+  border-color: var(--color-coral);
+  background: var(--color-coral-light);
+  color: var(--color-ink-900);
+}
+
+.pty-agent__button:active,
+.pty-agent__button[data-ui-state="active"] {
+  transform: translateY(var(--rule-hairline));
+}
+
+.pty-agent__button:disabled,
+.pty-agent__button[data-ui-state="disabled"] {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+.pty-agent__button[data-ui-state="loading"] {
+  cursor: progress;
+  opacity: var(--opacity-loading);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pty-agent-card:hover,
+  .pty-agent__button:hover,
+  .pty-agent__input:hover {
+    background: var(--color-cream-200);
+    color: var(--color-ink-900);
+  }
+}
+
+@media (pointer: coarse) {
+  .pty-agent-card,
+  .pty-agent__button,
+  .pty-agent__input {
+    min-height: 3rem;
+  }
+}
+
+@media (min-width: 40rem) {
+  .pty-agents__hire-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  }
+
+  .pty-agents__hire-fields > :nth-child(3),
+  .pty-agents__hire-fields > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 60rem) {
+  .pty-agents__layout {
+    grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr);
+  }
+
+  .pty-agents__hire {
+    grid-template-columns: minmax(12rem, 0.65fr) minmax(0, 2fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pty-agent-card,
+  .pty-agent__button {
+    transition-duration: var(--dur-calm);
+    transition-property: opacity;
+  }
+}

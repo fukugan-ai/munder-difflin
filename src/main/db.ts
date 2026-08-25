@@ -4,7 +4,7 @@ import { Pool, types, type PoolClient, type PoolConfig, type QueryResult } from 
 import type { AgentUsageSample } from './usage';
 
 const SCHEMA = 'munder_difflin';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 types.setTypeParser(20, (value) => value);
 
 export interface CommandHistoryRow {
@@ -238,14 +238,22 @@ export class PersistStore {
   }
 
   async resetNamespace(): Promise<boolean> {
-    if (!this.isOpen || !this.pool || !this.config) return false;
+    if (!this.isOpen || !this.config || !this.lockClient) return false;
     this.acceptingWrites = false;
     if (!await this.drain()) return false;
-    let client: PoolClient;
-    try { client = await this.pool.connect(); } catch { return false; }
+    const client = this.lockClient;
     try {
       await client.query('BEGIN');
-      for (const table of ['cost_ledger', 'command_history', 'kv', 'legacy_imports']) {
+      for (const table of [
+        'web_trigger_history',
+        'web_event_stream_heads',
+        'web_durable_records',
+        'web_app_config',
+        'cost_ledger',
+        'command_history',
+        'kv',
+        'legacy_imports'
+      ]) {
         await client.query(`DELETE FROM ${SCHEMA}.${table} WHERE namespace=$1`, [this.config.namespace]);
       }
       await client.query('COMMIT');
@@ -255,7 +263,7 @@ export class PersistStore {
       try { await client.query('ROLLBACK'); } catch { /* noop */ }
       this.acceptingWrites = true;
       return false;
-    } finally { client.release(); }
+    }
   }
 
   async drain(timeoutMs = 2_000): Promise<boolean> {
