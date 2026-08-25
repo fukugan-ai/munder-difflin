@@ -120,17 +120,20 @@ test('statAbs expands bare ~, Windows-style ~\\, and whitespace paths', async ()
   const inHome = path.join(HOME, fileBasename);
   fs.writeFileSync(inHome, 'x');
   try {
-    const resSlash = await statAbs(`~/${fileBasename}`);
+    const resSlash = await statAbs(`~/${fileBasename}`, HOME);
     assert.equal(resSlash.exists, true);
     assert.equal(resSlash.isFile, true);
 
-    const resWin = await statAbs(`~\\${fileBasename}`);
+    const resWin = await statAbs(`~\\${fileBasename}`, HOME);
     assert.equal(resWin.exists, true);
     assert.equal(resWin.isFile, true);
 
-    const resPadded = await statAbs(` ~/${fileBasename} `);
+    const resPadded = await statAbs(` ~/${fileBasename} `, HOME);
     assert.equal(resPadded.exists, true);
     assert.equal(resPadded.isFile, true);
+
+    const unauthorized = await statAbs(`~/${fileBasename}`);
+    assert.deepEqual(unauthorized, { exists: false, isFile: false, path: '' });
   } finally {
     fs.rmSync(inHome, { force: true });
   }

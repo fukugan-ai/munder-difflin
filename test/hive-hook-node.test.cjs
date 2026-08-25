@@ -68,6 +68,12 @@ async function run(cmd, env) {
     const child = spawn('/bin/sh', ['-c', cmd], { env, stdio: ['pipe', 'pipe', 'pipe'] });
     let stderr = '';
     child.stderr.on('data', (d) => { stderr += d; });
+    // The negative control intentionally launches a missing `node`, so the
+    // shell may exit 127 before this write completes. A closed stdin is the
+    // expected lifecycle for that child, not an uncaught test-process error.
+    child.stdin.on('error', (e) => {
+      if (e.code !== 'EPIPE') stderr += String(e);
+    });
     child.stdin.end(JSON.stringify({ hook_event_name: 'Stop', session_id: 's1' }));
     child.on('close', (code) => resolve({ code, stderr }));
   });
