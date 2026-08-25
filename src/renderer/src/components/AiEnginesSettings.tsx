@@ -127,17 +127,17 @@ export function AiEnginesSettings({ config }: { config: HarnessConfig }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <div style={headStyle}>AI ENGINE PROVIDERS (BYOK)</div>
+        <div style={headStyle}>AIエンジンプロバイダー（BYOK）</div>
         <div style={{ fontSize: 12, color: 'var(--cth-ink-700)', lineHeight: '18px' }}>
-          API keys + local endpoints for the OpenCode, Crush, pi.dev and Qwen engines.
-          Keys are stored <strong>write-only</strong> (encrypted at rest; never shown again)
-          and used only when those engines spawn. Claude Code and Codex use their own login.
+          OpenCode、Crush、pi.dev、QwenエンジンのAPIキーとローカルエンドポイントを設定します。
+          キーは<strong>書き込み専用</strong>で暗号化保存され、再表示されません。
+          対象エンジンの起動時だけ使用されます。Claude CodeとCodexはそれぞれのログインを使用します。
         </div>
       </div>
 
       {/* Backend API keys (write-only) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={headStyle}>API KEYS</div>
+        <div style={headStyle}>APIキー</div>
         {BACKENDS.map((b) => (
           <div key={b.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={labelStyle}>
@@ -152,9 +152,9 @@ export function AiEnginesSettings({ config }: { config: HarnessConfig }) {
                 onChange={(e) => setDraftKey((s) => ({ ...s, [b.id]: e.target.value }))}
                 style={inputStyle}
               />
-              <PixelButton variant="secondary" size="sm" onClick={() => saveKey(b.id)}>Save</PixelButton>
+              <PixelButton variant="secondary" size="sm" onClick={() => saveKey(b.id)}>保存</PixelButton>
               {hasKey[b.id] && (
-                <PixelButton variant="secondary" size="sm" onClick={() => clearKey(b.id)}>Clear</PixelButton>
+                <PixelButton variant="secondary" size="sm" onClick={() => clearKey(b.id)}>消去</PixelButton>
               )}
             </div>
             {note[b.id] && <div style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>{note[b.id]}</div>}
@@ -164,7 +164,7 @@ export function AiEnginesSettings({ config }: { config: HarnessConfig }) {
 
       {/* Per-CLI local endpoint + default model */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={headStyle}>LOCAL ENDPOINT · DEFAULT MODEL (PER ENGINE)</div>
+        <div style={headStyle}>ローカルエンドポイント · 既定モデル（エンジン別）</div>
         {CLIS.map((c) => (
           <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -178,7 +178,7 @@ export function AiEnginesSettings({ config }: { config: HarnessConfig }) {
                 style={inputStyle}
               />
               <input
-                placeholder="default model (provider/model)"
+                placeholder="既定モデル（provider/model）"
                 defaultValue={models[c.id] ?? ''}
                 onBlur={(e) => saveModel(c.id, e.target.value)}
                 style={{ ...inputStyle, maxWidth: 220 }}
@@ -188,18 +188,18 @@ export function AiEnginesSettings({ config }: { config: HarnessConfig }) {
         ))}
         {/* Local-setup guides (ondev-c part-3) — link the two how-to blogs. */}
         <div style={{ fontSize: 12, color: 'var(--cth-ink-700)', lineHeight: '17px' }}>
-          Running open models? Step-by-step guides:{' '}
+          オープンモデルを使いますか？手順ガイド：{' '}
           <a
             href={OSS_BLOG_LINKS.openModels}
             onClick={(e) => { e.preventDefault(); void window.cth.openExternal(OSS_BLOG_LINKS.openModels); }}
             style={linkStyle}
-          >run Munder Difflin on open models</a>
+          >Munder Difflinをオープンモデルで動かす</a>
           {' '}·{' '}
           <a
             href={OSS_BLOG_LINKS.macMini}
             onClick={(e) => { e.preventDefault(); void window.cth.openExternal(OSS_BLOG_LINKS.macMini); }}
             style={linkStyle}
-          >set it up on a Mac Mini</a>.
+          >Mac Miniにセットアップする</a>。
         </div>
       </div>
 
@@ -208,10 +208,8 @@ export function AiEnginesSettings({ config }: { config: HarnessConfig }) {
         fontSize: 12, color: 'var(--cth-ink-700)', lineHeight: '17px',
         padding: 8, boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', background: 'var(--cth-paper-100)'
       }}>
-        ⚠ In <strong>auto mode</strong> these engines run with full filesystem + shell access
-        (no sandbox) — like Claude's bypass mode. Turn auto mode off (General) to make them
-        ask first. Live end-to-end verification with real model calls is pending your keys / a
-        local LLM.
+        ⚠ <strong>自動モード</strong>では、これらのエンジンはサンドボックスなしでファイルシステムとシェルへアクセスします。
+        事前確認させるには「一般」で自動モードをオフにしてください。実モデルによる動作確認にはAPIキーまたはローカルLLMが必要です。
       </div>
     </div>
   );

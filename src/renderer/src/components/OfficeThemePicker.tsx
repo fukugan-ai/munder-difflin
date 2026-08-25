@@ -95,17 +95,17 @@ export function OfficeThemePicker({ config }: { config: HarnessConfig }) {
         fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
         color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
       }}>
-        Office Theme
+        オフィステーマ
       </div>
 
       {/* Experimental feature flag */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-            TV-show office themes <span style={{ color: 'var(--cth-ink-500)' }}>(experimental)</span>
+            テレビ番組風オフィステーマ <span style={{ color: 'var(--cth-ink-500)' }}>（試験機能）</span>
           </span>
           <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-            Re-skin the pixel office as a TV show. Switching starts a fresh cast.
+            ピクセルオフィスをテレビ番組風に変更します。切り替えると新しいキャストで開始します。
           </span>
         </div>
         <PixelButton variant={enabled ? 'primary' : 'secondary'} size="sm" onClick={toggleFlag}>
@@ -144,12 +144,12 @@ export function OfficeThemePicker({ config }: { config: HarnessConfig }) {
                     </span>
                     {isCurrent && (
                       <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 7, color: 'var(--cth-mint)', textTransform: 'uppercase' }}>
-                        current
+                        現在
                       </span>
                     )}
                     {!t.built && !isCurrent && (
                       <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 7, color: 'var(--cth-ink-500)', textTransform: 'uppercase' }}>
-                        soon
+                        近日対応
                       </span>
                     )}
                   </span>
@@ -205,7 +205,7 @@ function ThemeSwitchConfirmModal({
       }}
     >
       <div onClick={(e) => e.stopPropagation()} style={{ width: 480, maxWidth: '92vw' }}>
-        <PixelPanel variant="dialog" title={`SWITCH OFFICE TO "${label.toUpperCase()}"?`} noPadding>
+        <PixelPanel variant="dialog" title={`オフィスを「${label.toUpperCase()}」へ切り替えますか？`} noPadding>
           <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{
@@ -221,28 +221,28 @@ function ThemeSwitchConfirmModal({
                   fontFamily: 'var(--cth-font-display)', fontSize: 12, lineHeight: '20px',
                   color: 'var(--cth-ink-900)', marginBottom: 4,
                 }}>
-                  STARTS A FRESH CAST
+                  新しいキャストで開始
                 </div>
                 <div style={{ fontSize: 15, lineHeight: '22px', color: 'var(--cth-ink-700)' }}>
-                  Your <strong>{n} current agent{n === 1 ? '' : 's'}</strong> will be deleted — their terminals close and any in-progress work stops. Only <strong>{godName}</strong> carries over.
+                  現在のエージェント<strong>{n}件</strong>は削除され、ターミナルと進行中の作業も停止します。<strong>{godName}</strong>だけが引き継がれます。
                   {working > 0 && (
                     <span style={{ display: 'block', marginTop: 6, color: 'var(--cth-coral)' }}>
-                      ⚠ {working} agent{working === 1 ? ' is' : 's are'} still working.
+                      ⚠ {working}件のエージェントがまだ作業中です。
                     </span>
                   )}
                 </div>
                 <div style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)', marginTop: 8 }}>
-                  This can't be undone.
+                  この操作は元に戻せません。
                 </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <PixelButton variant="secondary" size="md" onClick={onCancel} disabled={busy}>
-                cancel
+                キャンセル
               </PixelButton>
               <PixelButton variant="destructive" size="md" onClick={onConfirm} disabled={busy}>
-                {busy ? 'switching…' : `delete ${n} & switch`}
+                {busy ? '切り替え中…' : `${n}件を削除して切り替え`}
               </PixelButton>
             </div>
           </div>

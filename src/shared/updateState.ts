@@ -152,34 +152,34 @@ export function describeUpdate(status: UpdateStatus | null, currentVersion: stri
     // Settings started the automatic download; the chip reports progress and
     // nothing else, so the two paths are not raced against each other.
     return {
-      label: `downloading ${clampPercent(status.percent)}%`, action: 'none', tone: 'busy', busy: true,
-      title: `Downloading v${status.version}… ${clampPercent(status.percent)}%`
+      label: `ダウンロード中 ${clampPercent(status.percent)}%`, action: 'none', tone: 'busy', busy: true,
+      title: `v${status.version}をダウンロード中… ${clampPercent(status.percent)}%`
     };
   }
   const pending = pendingVersion(status, v);
   if (pending) {
     const why = status?.state === 'available-manual' && status.reason
-      ? ` (this install could not update itself: ${status.reason})` : '';
+      ? `（この環境では自動更新できません：${status.reason}）` : '';
     return {
-      label: `v${pending} · download`, action: 'manual', tone: 'ready', busy: false,
-      title: `Click to download v${pending}, then replace the app you have${why}`
+      label: `v${pending} · ダウンロード`, action: 'manual', tone: 'ready', busy: false,
+      title: `クリックしてv${pending}をダウンロードし、現在のアプリを置き換えます${why}`
     };
   }
   switch (status?.state) {
     case 'checking':
-      return { label: 'checking…', action: 'none', tone: 'busy', busy: true, title: `Checking for updates (you're on v${v})` };
+      return { label: '確認中…', action: 'none', tone: 'busy', busy: true, title: `アップデートを確認中（現在v${v}）` };
     case 'error':
       return {
-        label: 'update check failed', action: 'check', tone: 'warn', busy: false,
-        title: `${status.message} — click to try again`
+        label: '確認に失敗', action: 'check', tone: 'warn', busy: false,
+        title: `${status.message} — クリックして再試行`
       };
     case 'not-available':
     case 'just-updated':
       // A check has confirmed it, so say so. Idle (no check yet) stays bare.
-      return { label: 'latest', action: 'check', tone: 'idle', busy: false, title: `v${v} is the latest version — click to check again` };
+      return { label: '最新版', action: 'check', tone: 'idle', busy: false, title: `v${v}は最新版です — クリックして再確認` };
     case 'idle':
     default:
-      return { label: null, action: 'check', tone: 'idle', busy: false, title: `v${v} — click to check for updates` };
+      return { label: null, action: 'check', tone: 'idle', busy: false, title: `v${v} — クリックしてアップデートを確認` };
   }
 }
 
@@ -214,61 +214,61 @@ export function describeUpdateSettings(
   switch (status?.state) {
     case 'checking':
       return {
-        headline: `You're on v${v}`,
-        detail: 'Checking for a newer release…',
+        headline: `現在のバージョン：v${v}`,
+        detail: '新しいリリースを確認中…',
         button: null, action: 'none', busy: true, tone: 'busy'
       };
     case 'available':
       return {
-        headline: `v${status.version} is available`,
-        detail: `You're on v${v}. Download it now — you'll be asked to restart once it's ready.`,
-        button: `Download v${status.version}`, action: 'download', busy: false, tone: 'ready'
+        headline: `v${status.version}を利用できます`,
+        detail: `現在はv${v}です。今すぐダウンロードし、準備ができたら再起動してください。`,
+        button: `v${status.version}をダウンロード`, action: 'download', busy: false, tone: 'ready'
       };
     case 'downloading':
       return {
-        headline: `Downloading v${status.version}`,
-        detail: `${clampPercent(status.percent)}% done. You can keep working; the restart is yours to trigger.`,
+        headline: `v${status.version}をダウンロード中`,
+        detail: `${clampPercent(status.percent)}%完了。作業を続けられます。再起動は自動では行いません。`,
         button: null, action: 'none', busy: true, tone: 'busy'
       };
     case 'downloaded':
       return {
-        headline: `v${status.version} is ready to install`,
-        detail: `Restart Munder Difflin to finish updating from v${v}.`,
-        button: 'Restart to update', action: 'restart', busy: false, tone: 'ready'
+        headline: `v${status.version}をインストールできます`,
+        detail: `Munder Difflinを再起動し、v${v}からの更新を完了します。`,
+        button: '再起動して更新', action: 'restart', busy: false, tone: 'ready'
       };
     case 'available-manual':
       return {
-        headline: `v${status.version} is available`,
+        headline: `v${status.version}を利用できます`,
         detail: status.reason
-          ? `This install can't update itself (${status.reason}) — download it from the release page.`
-          : `This install can't update itself — download it from the release page.`,
-        button: status.downloadUrl ? `Download v${status.version}` : 'Open release page',
+          ? `この環境では自動更新できません（${status.reason}）。リリースページからダウンロードしてください。`
+          : 'この環境では自動更新できません。リリースページからダウンロードしてください。',
+        button: status.downloadUrl ? `v${status.version}をダウンロード` : 'リリースページを開く',
         action: 'open-release', busy: false, tone: 'warn'
       };
     case 'just-updated':
       return {
-        headline: `You're on v${v}`,
-        detail: 'Freshly updated. This is the latest release.',
-        button: 'Check for updates', action: 'check', busy: false, tone: 'idle'
+        headline: `現在のバージョン：v${v}`,
+        detail: '更新が完了しました。最新版です。',
+        button: 'アップデートを確認', action: 'check', busy: false, tone: 'idle'
       };
     case 'error':
       return {
-        headline: 'Update check failed',
-        detail: `${status.message} (you're on v${v}).`,
-        button: 'Try again', action: 'check', busy: false, tone: 'warn'
+        headline: 'アップデートの確認に失敗しました',
+        detail: `${status.message}（現在v${v}）。`,
+        button: '再試行', action: 'check', busy: false, tone: 'warn'
       };
     case 'not-available':
       return {
-        headline: `v${v} is the latest version`,
-        detail: "You're already up to date — nothing to install.",
-        button: 'Check again', action: 'check', busy: false, tone: 'idle'
+        headline: `v${v}は最新版です`,
+        detail: '最新の状態です。インストールする更新はありません。',
+        button: '再確認', action: 'check', busy: false, tone: 'idle'
       };
     case 'idle':
     default:
       return {
-        headline: `You're on v${v}`,
-        detail: 'Updates are checked automatically every 6 hours. Check now if you want to be sure.',
-        button: 'Check for updates', action: 'check', busy: false, tone: 'idle'
+        headline: `現在のバージョン：v${v}`,
+        detail: 'アップデートは6時間ごとに自動確認します。必要なら今すぐ確認できます。',
+        button: 'アップデートを確認', action: 'check', busy: false, tone: 'idle'
       };
   }
 }
@@ -280,8 +280,8 @@ export function manualInstallSteps(platform: string): { os: string; steps: strin
     return {
       os: 'macOS',
       steps: [
-        'Open the .dmg and drag Munder Difflin onto Applications. Choose Replace when asked.',
-        'Quit this app, open the new one from Applications, and pick the same project.'
+        '.dmgを開き、Munder Difflinを「アプリケーション」へドラッグします。確認されたら「置き換える」を選びます。',
+        'このアプリを終了し、「アプリケーション」から新版を開いて同じプロジェクトを選びます。'
       ]
     };
   }
@@ -289,16 +289,16 @@ export function manualInstallSteps(platform: string): { os: string; steps: strin
     return {
       os: 'Windows',
       steps: [
-        'Quit this app, then run the downloaded setup .exe. It replaces the installed version.',
-        'Open Munder Difflin again and pick the same project.'
+        'このアプリを終了し、ダウンロードしたセットアップ.exeを実行してインストール済み版を置き換えます。',
+        'Munder Difflinをもう一度開き、同じプロジェクトを選びます。'
       ]
     };
   }
   return {
     os: 'Linux',
     steps: [
-      'Make the downloaded .AppImage executable (chmod +x) and move it over the one you run now.',
-      'Quit this app, launch the new AppImage, and pick the same project.'
+      'ダウンロードした.AppImageへ実行権限を付け（chmod +x）、現在使用中のファイルを置き換えます。',
+      'このアプリを終了し、新しいAppImageを起動して同じプロジェクトを選びます。'
     ]
   };
 }

@@ -105,11 +105,11 @@ export function SettingsHeroCard() {
               <>
                 <span style={{ flex: 1 }} />
                 <span style={{ fontFamily: MONO, fontSize: 11, color: 'var(--cth-ink-700)' }}>
-                  v{pending} is out
+                  v{pending} 公開中
                 </span>
                 <PixelButton variant="primary" size="sm" onClick={downloadManually}
-                  title="Download the installer and replace the app yourself. Auto-update is in Updates below.">
-                  download v{pending}
+                  title="インストーラーをダウンロードして手動で更新します。自動更新は下の「更新」にあります。">
+                  v{pending}をダウンロード
                 </PixelButton>
               </>
             )}
@@ -137,15 +137,14 @@ export function SettingsHeroCard() {
             display: 'inline-block', fontFamily: MONO, fontSize: 9, letterSpacing: '.18em',
             textTransform: 'uppercase', padding: '2px 7px',
             background: INK, color: 'var(--cth-paper-100)'
-          }}>Announcement</span>
+          }}>お知らせ</span>
           <div style={{
             marginTop: 8, fontFamily: MONO, fontSize: 14, fontWeight: 700, color: INK
-          }}>v0.5.0 launches with Munder Difflin Pro.</div>
+          }}>v0.5.0でMunder Difflin Proが登場します。</div>
           <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, color: 'var(--cth-ink-700)', maxWidth: '64ch' }}>
-            <b style={{ color: INK }}>Community stays free, stays open, and keeps getting updates.</b>{' '}
-            Pro ships with new features and integrations, with more posted throughout the year,
-            and it stays ahead of Community, for power users who want the full potential of
-            coding agents and agent harnesses. The Pro roadmap also includes a mobile app.
+            <b style={{ color: INK }}>Community版は引き続き無料・オープンで、更新も継続します。</b>{' '}
+            Pro版には新機能や外部連携が追加され、年間を通じてさらに提供されます。
+            コーディングエージェントとエージェント基盤を最大限活用したいパワーユーザー向けで、モバイルアプリも計画されています。
           </div>
         </div>
 
@@ -163,17 +162,16 @@ export function SettingsHeroCard() {
             50<span style={{
               display: 'block', fontSize: 8, letterSpacing: '.2em', fontWeight: 500,
               color: 'var(--cth-paper-100)', opacity: 0.7, marginTop: 5
-            }}>% OFF</span>
+            }}>% 割引</span>
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontFamily: MONO, fontSize: 12.5, fontWeight: 600 }}>On the Founders&rsquo; Wall?</div>
+            <div style={{ fontFamily: MONO, fontSize: 12.5, fontWeight: 600 }}>Founders&rsquo; Wallに参加済みですか？</div>
             <div style={{ fontSize: 12, lineHeight: 1.45, opacity: 0.85, marginTop: 2 }}>
-              A month of Munder Difflin Pro free, then 50% off the annual plan. For the first
-              100 people on the wall.
+              Munder Difflin Proを1か月無料、その後は年間プランが50%割引になります。先着100名限定です。
             </div>
           </div>
           <PixelButton variant="primary" size="sm" onClick={() => void window.cth.openExternal(FOUNDERS_WALL_URL)}>
-            see the wall
+            Wallを見る
           </PixelButton>
           {PLAN.upgrade && (
             <PixelButton variant="secondary" size="sm" onClick={() => void window.cth.openExternal(PLAN.upgrade!.url)}>
@@ -193,11 +191,11 @@ export function SettingsHeroCard() {
             <span style={{
               fontFamily: MONO, fontSize: 9, letterSpacing: '.18em',
               textTransform: 'uppercase', color: 'var(--cth-ink-500)', flexShrink: 0
-            }}>Sponsored by</span>
+            }}>スポンサー</span>
             <span style={{ fontSize: 13, color: INK, flexShrink: 0 }}>{SPONSOR.name}</span>
             <span style={{ flex: 1, minWidth: 120, fontSize: 12, color: 'var(--cth-ink-700)' }}>{SPONSOR.blurb}</span>
             <PixelButton variant="ghost" size="sm" onClick={() => void window.cth.openExternal(SPONSOR.url)}>
-              visit
+              開く
             </PixelButton>
           </div>
         )}
@@ -208,32 +206,32 @@ export function SettingsHeroCard() {
           paddingTop: 12, borderTop: `2px solid ${INK}`
         }}>
           <PixelButton variant="secondary" size="sm" onClick={showReleaseNotes}>
-            <span title="Show the release notes for the update you were last told about"
+            <span title="前回通知された更新のリリースノートを表示"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Icon name="sparkle" /> what&rsquo;s new
+              <Icon name="sparkle" /> 新着情報
             </span>
           </PixelButton>
           <PixelButton variant="secondary" size="sm" onClick={() => void window.cth.openExternal(GITHUB_REPO_URL)}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              ⭐ star on GitHub
+              ⭐ GitHubでスター
             </span>
           </PixelButton>
           <PixelButton variant="secondary" size="sm" onClick={() => void window.cth.openExternal(DISCORD_URL)}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              💬 join Discord
+              💬 Discordに参加
             </span>
           </PixelButton>
           <PixelButton
             variant="ghost"
             size="sm"
             onClick={() => void window.cth.openExternal(`${GITHUB_REPO_URL}/issues/new`)}
-          >report a problem</PixelButton>
+          >問題を報告</PixelButton>
           <span style={{ flex: 1 }} />
           <a
             href={`${GITHUB_REPO_URL}/blob/main/CHANGELOG.md`}
             onClick={(e) => { e.preventDefault(); void window.cth.openExternal(`${GITHUB_REPO_URL}/blob/main/CHANGELOG.md`); }}
             style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}
-          >full changelog →</a>
+          >変更履歴をすべて表示 →</a>
         </div>
       </div>
     </div>

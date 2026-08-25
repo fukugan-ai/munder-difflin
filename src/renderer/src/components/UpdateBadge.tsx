@@ -120,15 +120,15 @@ export function UpdateBadge() {
         }}
       >
         <div style={{ fontFamily: 'var(--cth-font-mono, monospace)', fontWeight: 700, fontSize: 12.5 }}>
-          Click to download v{pending}
+          クリックしてv{pending}をダウンロード
         </div>
         <div style={{ marginTop: 4, color: 'var(--cth-ink-700)' }}>
-          Download the latest version and replace the app you have. Prefer the app to update itself? Settings &rarr; Updates.
+          最新版をダウンロードし、現在のアプリを置き換えます。自動更新を使う場合は「設定」&rarr;「アップデート」を開いてください。
         </div>
         <div style={{
           marginTop: 8, fontFamily: 'var(--cth-font-mono, monospace)', fontSize: 9,
           letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--cth-ink-500)'
-        }}>On {steps.os}</div>
+        }}>{steps.os}での手順</div>
         <ol style={{ margin: '4px 0 0', paddingLeft: 18, color: 'var(--cth-ink-700)' }}>
           {steps.steps.map((t) => <li key={t}>{t}</li>)}
         </ol>
@@ -139,7 +139,7 @@ export function UpdateBadge() {
     {started && (
       <div
         role="dialog"
-        aria-label="Install the update"
+        aria-label="更新をインストール"
         className="cth-titlebar-nodrag"
         style={{
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 400,
@@ -150,17 +150,17 @@ export function UpdateBadge() {
         }}
       >
         <div style={{ fontFamily: 'var(--cth-font-mono, monospace)', fontWeight: 700, fontSize: 13 }}>
-          v{started} is downloading in your browser.
+          v{started}をブラウザーでダウンロードしています。
         </div>
         <div style={{ marginTop: 6, color: 'var(--cth-ink-700)' }}>
-          When it lands, quit this app and install the new version over the current one. Open it and
-          pick the same project. Your agents, memory and settings stay where they are.
+          ダウンロード後にこのアプリを終了し、現在のアプリへ上書きインストールしてください。
+          新しいアプリを開いて同じプロジェクトを選んでも、エージェント、記憶、設定は保持されます。
         </div>
         <ol style={{ margin: '8px 0 0', paddingLeft: 18, color: 'var(--cth-ink-700)' }}>
           {steps.steps.map((t) => <li key={t}>{t}</li>)}
         </ol>
         <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
-          <PixelButton variant="ghost" size="sm" onClick={() => setStarted(null)}>got it</PixelButton>
+          <PixelButton variant="ghost" size="sm" onClick={() => setStarted(null)}>了解</PixelButton>
         </div>
       </div>
     )}

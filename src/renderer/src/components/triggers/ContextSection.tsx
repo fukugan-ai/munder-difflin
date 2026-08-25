@@ -45,37 +45,37 @@ export function ContextSection({ onSummary }: { onSummary?: (s: string) => void 
     commit({ ...cfg, [key]: { ...cfg[key], ...fields } });
   };
 
-  if (!cfg) return <Muted>One sec…</Muted>;
+  if (!cfg) return <Muted>少々お待ちください…</Muted>;
 
   return (
     <>
       <Muted>
-        A rule fires only when both halves agree: the gap since its last run has passed, AND that
-        agent&apos;s context is at least as full as the bar. A bar of 0% means the clock alone.
+        前回実行から指定時間が経過し、かつエージェントのコンテキスト使用率が指定値以上になった場合だけ実行します。
+        0%なら時間だけで実行します。
       </Muted>
       <div style={{ height: 8 }} />
 
       <RuleCard
-        title="Compact"
-        blurb="Summarises the context so the thread keeps going."
+        title="コンパクト"
+        blurb="コンテキストを要約して会話を続けられるようにします。"
         rule={cfg.compact}
-        messageLabel="EXTRA FOCUS"
-        messageHint="Appended to the provider's compaction command. Empty sends the bare command."
-        messagePlaceholder="What the summary must keep…"
+        messageLabel="要約で重視する内容"
+        messageHint="プロバイダーのコンパクトコマンドへ追加します。空欄ならコマンドだけを送ります。"
+        messagePlaceholder="要約に必ず残す内容…"
         onPatch={(fields) => patch('compact', fields)}
       />
 
       <RuleCard
-        title="Clear"
-        blurb="Discards the context. Nothing is summarised."
+        title="クリア"
+        blurb="コンテキストを破棄します。要約は作成されません。"
         rule={cfg.clear}
         messageLabel="COMMAND"
-        messageHint="Sent literally. Empty sends the bare clear command."
+        messageHint="そのまま送信します。空欄ならクリアコマンドだけを送ります。"
         messagePlaceholder="/clear"
         caution={
           <>
-            Clearing throws context away — it is not a smaller version of compaction. An agent
-            mid-task forgets what it was doing. Leave this off unless you keep context another way.
+            クリアはコンテキストを破棄する操作で、コンパクトの簡易版ではありません。
+            作業中のエージェントは内容を忘れます。別の方法で保持している場合を除き、オフにしてください。
           </>
         }
         onPatch={(fields) => patch('clear', fields)}
@@ -111,13 +111,13 @@ function RuleCard({ title, blurb, rule, messageLabel, messageHint, messagePlaceh
       {!open && (
         <Hint>
           {rule.enabled
-            ? <>Every {fmtInterval(rule.everyMs)}, once context passes {rule.minContextPct}%.</>
-            : <>Off.</>}
+            ? <>{fmtInterval(rule.everyMs)}ごと、コンテキストが{rule.minContextPct}%を超えたら実行。</>
+            : <>オフ</>}
         </Hint>
       )}
       {open && (
         <div style={{ marginTop: 4 }}>
-          <Field label="NO SOONER THAN EVERY">
+          <Field label="最短実行間隔">
             {/* Main clamps a context cadence to 1 minute … 24 hours, so the
                 picker offers exactly that range and never labels a value it
                 cannot actually store. */}
@@ -128,16 +128,16 @@ function RuleCard({ title, blurb, rule, messageLabel, messageHint, messagePlaceh
               maxMs={86_400_000}
             />
           </Field>
-          <Field label="CONTEXT BAR">
+          <Field label="コンテキスト使用率">
             <PctField value={rule.minContextPct} onChange={(minContextPct) => onPatch({ minContextPct })} />
-            <Hint>How full the window must be before this may run. 0% = time alone.</Hint>
+            <Hint>実行に必要なコンテキスト使用率です。0%なら時間だけで判定します。</Hint>
           </Field>
-          <Field label="BAR ON BIG WINDOWS">
+          <Field label="大容量ウィンドウの使用率">
             <PctField
               value={rule.minContextPctLargeWindow}
               onChange={(minContextPctLargeWindow) => onPatch({ minContextPctLargeWindow })}
             />
-            <Hint>Used on ~1M-token windows, where a smaller slice is still an enormous amount of text.</Hint>
+            <Hint>約100万トークンのウィンドウに使います。低い割合でも大量のテキストになります。</Hint>
           </Field>
           <Field label={messageLabel}>
             <textarea

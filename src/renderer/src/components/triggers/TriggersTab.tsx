@@ -24,12 +24,12 @@ export function TriggersTab() {
 
   return (
     <Scroll>
-      <Muted>Everything that can start work without you typing.</Muted>
+      <Muted>あなたが入力しなくても作業を開始できる仕組みを管理します。</Muted>
       <div style={{ height: 8 }} />
 
       <TriggerCard
-        title="SCHEDULES"
-        blurb="Run a prompt on a repeating clock."
+        title="スケジュール"
+        blurb="一定間隔でプロンプトを実行します。"
         summary={schedulesSummary}
         defaultOpen
       >
@@ -37,24 +37,24 @@ export function TriggersTab() {
       </TriggerCard>
 
       <TriggerCard
-        title="CONTEXT"
-        blurb="Compact or clear an agent as its context fills."
+        title="コンテキスト"
+        blurb="コンテキストが増えたらエージェントをコンパクトまたはクリアします。"
         summary={contextSummary}
       >
         <ContextSection onSummary={setContextSummary} />
       </TriggerCard>
 
       <TriggerCard
-        title="WEBHOOKS"
-        blurb="Let an outside system post work in."
+        title="Webhook"
+        blurb="外部システムから作業を受け付けます。"
         summary={webhooksSummary}
       >
         <WebhooksSection onSummary={setWebhooksSummary} />
       </TriggerCard>
 
       <TriggerCard
-        title="ORGANISATION"
-        blurb="Let a teammate's Munder Difflin message yours."
+        title="組織"
+        blurb="チームメンバーのMunder Difflinからメッセージを受け取ります。"
         summary={orgSummary}
       >
         <OrgSection onSummary={setOrgSummary} />

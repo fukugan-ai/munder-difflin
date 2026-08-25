@@ -92,7 +92,7 @@ export function GitTab({ cwd }: GitTabProps) {
         padding: 16, textAlign: 'center', color: 'var(--cth-ink-500)',
         fontFamily: 'var(--cth-font-ui)', fontSize: 14
       }}>
-        Not a git repo.<br />Run <code style={{ fontFamily: 'var(--cth-font-mono)' }}>git init</code> in the agent's terminal.
+        Gitリポジトリではありません。<br />エージェントのターミナルで <code style={{ fontFamily: 'var(--cth-font-mono)' }}>git init</code> を実行してください。
       </div>
     );
   }
@@ -154,7 +154,7 @@ export function GitTab({ cwd }: GitTabProps) {
               {status.staged.length === 0 && status.unstaged.length === 0 && status.untracked.length === 0 && (
                 <div style={{
                   padding: '4px 12px', color: 'var(--cth-ink-500)', fontSize: 13
-                }}>working tree clean</div>
+                }}>作業ツリーはクリーンです</div>
               )}
             </>
           )}
@@ -191,7 +191,7 @@ export function GitTab({ cwd }: GitTabProps) {
         {/* Graph */}
         <Section title="log">
           {log.length > 0 ? <CommitGraph commits={log} currentBranch={branch} /> : (
-            <div style={{ padding: 12, color: 'var(--cth-ink-500)', fontSize: 12 }}>no commits yet</div>
+            <div style={{ padding: 12, color: 'var(--cth-ink-500)', fontSize: 12 }}>コミットはまだありません</div>
           )}
         </Section>
       </div>
@@ -245,7 +245,7 @@ function StatusGroup({ label, entries }: {
           <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>{statusLabel(e.code)}</span>
           <button
             onClick={() => navigator.clipboard.writeText(e.path).catch(() => {})}
-            title="Copy path"
+            title="パスをコピー"
             style={{
               padding: 0, background: 'transparent', border: 'none',
               cursor: 'pointer', color: 'var(--cth-ink-500)'

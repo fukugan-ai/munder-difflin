@@ -51,11 +51,10 @@ export function McpDefaultsSettings({ config }: McpDefaultsSettingsProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <div style={{ ...labelStyle, marginBottom: 6 }}>Default MCP servers</div>
+        <div style={{ ...labelStyle, marginBottom: 6 }}>既定のMCPサーバー</div>
         <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-          These servers are merged into each new agent's session settings. Safe servers are on by
-          default; write/secret servers are off until you consent. Changes take effect on the next
-          agent spawn — running agents are not affected.
+          新しいエージェントのセッション設定に追加されるサーバーです。安全なサーバーは既定でオン、
+          書き込みや秘密情報を扱うサーバーは同意するまでオフです。変更は次回の起動から反映され、実行中のエージェントには影響しません。
         </span>
       </div>
 

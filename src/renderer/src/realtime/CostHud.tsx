@@ -86,7 +86,7 @@ export function CostHud({ compact = false }: CostHudProps): React.ReactElement |
     const tokLabel = totalTok >= 1000 ? `${(totalTok / 1000).toFixed(1)}k` : String(totalTok);
     return (
       <span
-        title={`${totalTok.toLocaleString()} voice audio tokens this session`}
+        title={`このセッションの音声トークン：${totalTok.toLocaleString('ja-JP')}`}
         style={{
           fontFamily: 'var(--cth-font-mono)',
           fontSize: 12,
@@ -104,13 +104,13 @@ export function CostHud({ compact = false }: CostHudProps): React.ReactElement |
   return (
     <div style={wrap}>
       <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={labelStyle}>Spend cap</span>
+        <span style={labelStyle}>利用上限</span>
         <input
           type="number"
           min="0"
           step="0.5"
           inputMode="decimal"
-          placeholder="none"
+          placeholder="なし"
           value={capText}
           onChange={(e) => setCapText(e.target.value)}
           onBlur={(e) => commitCap(e.target.value)}
@@ -125,25 +125,25 @@ export function CostHud({ compact = false }: CostHudProps): React.ReactElement |
       {live ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ color: meterColor, fontWeight: 600 }}>
-            {formatUsd(usd)} this session{capUsd != null ? ` / ${formatUsd(capUsd)}` : ''}
+            このセッション：{formatUsd(usd)}{capUsd != null ? ` / ${formatUsd(capUsd)}` : ''}
           </span>
           <span style={{ color: 'var(--cth-ink-500)', fontSize: 11 }}>
-            {inputTokens.toLocaleString()} in · {outputTokens.toLocaleString()} out audio tokens
+            入力 {inputTokens.toLocaleString('ja-JP')} · 出力 {outputTokens.toLocaleString('ja-JP')} 音声トークン
           </span>
           {overCap && (
             <span style={{ color: 'var(--cth-danger, #c0392b)', fontSize: 11 }}>
-              Over the spend cap — time to wrap up.
+              利用上限を超えました。終了してください。
             </span>
           )}
           {near && (
             <span style={{ color: 'var(--cth-warn, #b8860b)', fontSize: 11 }}>
-              Approaching the spend cap.
+              利用上限に近づいています。
             </span>
           )}
         </div>
       ) : (
         <span style={{ color: 'var(--cth-ink-500)', fontSize: 11 }}>
-          {usd > 0 ? `Last session: ${formatUsd(usd)}` : 'No active voice session.'}
+          {usd > 0 ? `前回のセッション：${formatUsd(usd)}` : '実行中の音声セッションはありません。'}
         </span>
       )}
     </div>

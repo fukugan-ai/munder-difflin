@@ -80,7 +80,7 @@ export function ThreadsPanel({ agentId }: ThreadsPanelProps) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'var(--cth-paper-200)' }}>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--cth-ink-700)', textAlign: 'center', maxWidth: 280 }}>
-          No conversations yet. Messages this agent receives will appear here as threads.
+          会話はまだありません。このエージェントが受信したメッセージはスレッドとしてここに表示されます。
         </p>
       </div>
     );
@@ -156,7 +156,7 @@ export function ThreadsPanel({ agentId }: ThreadsPanelProps) {
                   />
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <PixelButton size="sm" onClick={() => sendReply(last)} disabled={!(drafts[thread.conversation] ?? '').trim()}>
-                      Send
+                  送信
                     </PixelButton>
                   </div>
                 </div>

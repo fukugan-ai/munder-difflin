@@ -122,7 +122,7 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
           }}>
             Munder Difflin <span style={{ color: YELLOW }}>v{version.replace(/^v/, '')}</span>
             <span style={{ color: INK_FAINT, fontWeight: 500, marginLeft: 10, letterSpacing: '.12em' }}>
-              / release notes
+              / リリースノート
             </span>
           </span>
           <span aria-hidden style={{
@@ -133,8 +133,8 @@ export function ReleaseDrop({ version, html, onDismiss }: ReleaseDropProps) {
           </span>
           <button
             onClick={onDismiss}
-            aria-label="Close release notes"
-            title="Close (Esc)"
+            aria-label="リリースノートを閉じる"
+            title="閉じる（Esc）"
             style={{
               flexShrink: 0, width: 26, height: 26, padding: 0,
               background: PAPER, color: INK, border: `2px solid ${PAPER}`,

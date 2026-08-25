@@ -43,37 +43,37 @@ const STATE_VIEW: Record<
     variant: 'secondary',
     label: 'talk',
     dot: 'var(--cth-ink-300)',
-    help: 'Talk to Michael — start the voice session'
+    help: 'Michaelと話す — 音声セッションを開始'
   },
   connecting: {
     variant: 'secondary',
     label: '…',
     dot: 'var(--cth-lemon)',
     anim: 'cth-blink 700ms steps(2, end) infinite',
-    help: 'Connecting to Michael…'
+    help: 'Michaelへ接続中…'
   },
   listening: {
     variant: 'primary',
-    label: 'listening',
+    label: '聞き取り中',
     dot: 'var(--cth-mint)',
     anim: 'cth-pulse 1000ms steps(2, end) infinite',
-    help: 'Listening — Michael is hearing you (click to stop)',
+    help: '聞き取り中 — Michaelが音声を聞いています（クリックで停止）',
     activeBg: 'var(--cth-mint)'
   },
   responding: {
     variant: 'primary',
-    label: 'speaking',
+    label: '発話中',
     dot: 'var(--cth-sky)',
     anim: 'cth-pulse 600ms steps(2, end) infinite',
-    help: 'Michael is speaking (click to stop)',
+    help: 'Michaelが話しています（クリックで停止）',
     activeBg: 'var(--cth-sky)'
   },
   working: {
     variant: 'destructive',
-    label: 'working',
+    label: '処理中',
     dot: 'var(--cth-coral)',
     anim: 'cth-blink 500ms steps(2, end) infinite',
-    help: 'Michael is running a tool — mic muted (click to stop)'
+    help: 'Michaelがツールを実行中 — マイクはミュート中です（クリックで停止）'
   }
 };
 
@@ -104,7 +104,7 @@ export function RealtimeMichaelToggle({ compact = false }: RealtimeMichaelToggle
   // The tooltip carries the full WHY; the quiet info affordance below gives a
   // discoverable cue so the user never just hits a silently-dead button.
   const title = noKey
-    ? 'Talk needs your OpenAI API key (used for the Realtime voice API). Add it in Settings → Voice.'
+    ? '音声会話にはOpenAI APIキー（Realtime音声API用）が必要です。「設定」→「音声」で追加してください。'
     : error
       ? `${view.help} — ${error}`
       : view.help;
@@ -235,7 +235,7 @@ export function RealtimeMichaelToggle({ compact = false }: RealtimeMichaelToggle
           <button
             ref={iconRef}
             type="button"
-            aria-label="Why is Talk disabled?"
+            aria-label="音声会話を利用できない理由"
             aria-expanded={hintOpen}
             onClick={toggleHint}
             style={{
@@ -276,7 +276,7 @@ export function RealtimeMichaelToggle({ compact = false }: RealtimeMichaelToggle
                 whiteSpace: 'normal'
               }}
             >
-              <span>An <strong>OpenAI API key</strong> is needed to use this feature.</span>
+              <span>この機能には<strong>OpenAI APIキー</strong>が必要です。</span>
               <button
                 type="button"
                 onClick={openKeySettings}
@@ -287,7 +287,7 @@ export function RealtimeMichaelToggle({ compact = false }: RealtimeMichaelToggle
                   color: 'var(--cth-ink-900)', textDecoration: 'underline'
                 }}
               >
-                set it up now
+                今すぐ設定
               </button>
             </div>,
             document.body

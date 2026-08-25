@@ -167,10 +167,10 @@ export function TasksKanban() {
         borderBottom: '1px solid var(--cth-ink-300)'
       }}>
         <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 9, color: 'var(--cth-ink-500)' }}>
-          {tasks.length} task{tasks.length === 1 ? '' : 's'}
+          タスク {tasks.length}件
         </span>
         <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--cth-ink-300)' }}>
-          new work? dispatch it to Michael (monitor tab)
+          新しい作業はMichaelへ依頼してください（モニタータブ）
         </span>
       </div>
 
@@ -232,7 +232,7 @@ function TaskCard({ task, accent, assigneeName, onOpen, onDismiss }: {
     <div style={{ position: 'relative', display: 'flex' }}>
       <button
         onClick={onOpen}
-        title="open task details"
+        title="タスク詳細を開く"
         style={{
           flex: 1, minWidth: 0,
           display: 'flex', alignItems: 'stretch', gap: 0, padding: 0,
@@ -255,7 +255,7 @@ function TaskCard({ task, accent, assigneeName, onOpen, onDismiss }: {
           )}
         </span>
         {waitsOnHuman(task) && (
-          <span title="waiting on YOUR answer — see the ASK ME tab" style={{
+          <span title="あなたの回答待ちです — 確認事項タブを開いてください" style={{
             alignSelf: 'center', marginRight: 18, flexShrink: 0,
             fontFamily: 'var(--cth-font-display)', fontSize: 10, padding: '2px 5px 1px',
             background: 'var(--cth-lilac)', color: 'var(--cth-ink-900)',
@@ -266,8 +266,8 @@ function TaskCard({ task, accent, assigneeName, onOpen, onDismiss }: {
       {/* Dismiss — sibling button (not nested) so it never triggers onOpen. */}
       <button
         onClick={(e) => { e.stopPropagation(); onDismiss(); }}
-        title="dismiss this task (removes it from the board)"
-        aria-label="dismiss task"
+        title="このタスクをボードから外す"
+        aria-label="タスクを閉じる"
         style={{
           position: 'absolute', top: 0, right: 0, width: 16, height: 16, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
@@ -315,7 +315,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
       }}
     >
       <div onClick={(e) => e.stopPropagation()} style={{ width: 720, maxWidth: '94vw', maxHeight: '90vh', display: 'flex' }}>
-        <PixelPanel variant="dialog" title="TASK" noPadding style={{ display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0 }}>
+        <PixelPanel variant="dialog" title="タスク" noPadding style={{ display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0 }}>
           <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0, overflowY: 'auto' }}>
             {/* Title under a status-colored bar */}
             <div style={{ borderLeft: `4px solid ${col.accent}`, paddingLeft: 8 }}>
@@ -332,7 +332,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
               }}>{col.label}</span>
               {assigneeName
                 ? <PixelBadge status="working" label={assigneeName} />
-                : <span style={{ fontSize: 11, color: 'var(--cth-ink-300)' }}>unassigned</span>}
+                : <span style={{ fontSize: 11, color: 'var(--cth-ink-300)' }}>未割り当て</span>}
               <PriorityDots level={Math.max(1, Math.min(5, task.priority))} />
               <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-display)' }}>
                 {isNaN(created.getTime()) ? '' : created.toLocaleString('ja-JP')}
@@ -346,14 +346,14 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
               fontFamily: 'var(--cth-font-mono)', fontSize: 12, lineHeight: '18px',
               color: 'var(--cth-ink-900)', whiteSpace: 'pre-wrap', wordBreak: 'break-word'
             }}>
-              {task.description?.trim() || <span style={{ color: 'var(--cth-ink-300)' }}>(no description on this card)</span>}
+              {task.description?.trim() || <span style={{ color: 'var(--cth-ink-300)' }}>（このカードに説明はありません）</span>}
             </div>
 
             {/* The human Q&A trail — every decision documented on the card */}
             {(task.humanQA?.length ?? 0) > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)' }}>
-                  HUMAN Q&A
+                  ユーザーへの質問
                 </div>
                 {task.humanQA!.map((e, i) => (
                   <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -376,7 +376,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
                       </div>
                     ) : (
                       <div style={{ fontSize: 11, color: 'var(--cth-coral)', fontFamily: 'var(--cth-font-display)' }}>
-                        AWAITING YOUR ANSWER — ASK ME TAB
+                        回答待ち — 「質問」タブ
                       </div>
                     )}
                   </div>
@@ -388,7 +388,7 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
             {deps.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)' }}>
-                  DEPENDS ON
+                  依存先
                 </div>
                 {deps.map((d) => {
                   const dc = COLUMNS.find((c) => c.key === d.status) ?? COLUMNS[0];
@@ -421,10 +421,10 @@ export function TaskDetail({ task, all, assigneeName, onMove, onAssign, onClose 
               </select>
               <PixelButton variant="secondary" size="sm" onClick={onAssign}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                  <Icon name="arrow-right" /> assign
+                  <Icon name="arrow-right" /> 割り当て
                 </span>
               </PixelButton>
-              <PixelButton variant="ghost" size="sm" onClick={onClose}>close</PixelButton>
+              <PixelButton variant="ghost" size="sm" onClick={onClose}>閉じる</PixelButton>
             </div>
           </div>
         </PixelPanel>

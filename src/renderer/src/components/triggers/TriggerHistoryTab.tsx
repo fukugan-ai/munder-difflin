@@ -106,7 +106,7 @@ function buildExchanges(rows: TriggerHistoryEntry[]): Exchange[] {
 function relTime(ms: number): string {
   const past = ms >= 0;
   const a = Math.abs(ms);
-  if (a < 45_000) return 'just now';
+  if (a < 45_000) return 'たった今';
   const mins = Math.round(a / 60_000);
   const unit = mins < 60 ? `${mins}m` : mins < 1440 ? `${Math.round(mins / 60)}h` : `${Math.round(mins / 1440)}d`;
   return past ? `${unit} ago` : `in ${unit}`;
@@ -175,20 +175,20 @@ function Badge({ fill, line, children }: { fill: string; line: string; children:
 
 function KindBadge({ kind }: { kind: TriggerHistoryEntry['kind'] }) {
   return kind === 'directive'
-    ? <Badge fill="var(--cth-lemon-light)" line="var(--cth-lemon)">directive</Badge>
-    : <Badge fill="var(--cth-sky-light)" line="var(--cth-sky)">communication</Badge>;
+    ? <Badge fill="var(--cth-lemon-light)" line="var(--cth-lemon)">指示</Badge>
+    : <Badge fill="var(--cth-sky-light)" line="var(--cth-sky)">連絡</Badge>;
 }
 
 function DecisionBadge({ decision }: { decision: NonNullable<TriggerHistoryEntry['decision']> }) {
   switch (decision) {
     case 'pending':
-      return <Badge fill="var(--cth-lemon-light)" line="var(--cth-lemon)">needs you</Badge>;
+      return <Badge fill="var(--cth-lemon-light)" line="var(--cth-lemon)">確認が必要</Badge>;
     case 'approved':
-      return <Badge fill="var(--cth-mint-light)" line="var(--cth-mint)">approved</Badge>;
+      return <Badge fill="var(--cth-mint-light)" line="var(--cth-mint)">承認済み</Badge>;
     case 'rejected':
-      return <Badge fill="var(--cth-coral-light)" line="var(--cth-coral)">rejected</Badge>;
+      return <Badge fill="var(--cth-coral-light)" line="var(--cth-coral)">却下済み</Badge>;
     default:
-      return <Badge fill="var(--cth-cream-200)" line="var(--cth-ink-300)">auto-allowed</Badge>;
+      return <Badge fill="var(--cth-cream-200)" line="var(--cth-ink-300)">自動許可</Badge>;
   }
 }
 
@@ -213,10 +213,10 @@ function MessageBlock({
         <span style={tinyCaps}>{label}</span>
         <span style={{ ...tinyCaps, flexShrink: 0 }}>{relTime(Date.now() - msg.at)}</span>
       </div>
-      <div style={bodyBox}>{body.trim() ? (expanded ? body : text) : '(empty message)'}</div>
+      <div style={bodyBox}>{body.trim() ? (expanded ? body : text) : '（空のメッセージ）'}</div>
       {clipped && (
         <button type="button" onClick={onToggle} style={linkButton}>
-          {expanded ? 'show less' : `show all ${body.length} characters`}
+          {expanded ? '折りたたむ' : `${body.length}文字すべて表示`}
         </button>
       )}
     </div>
@@ -248,8 +248,8 @@ function ExchangeCard({
   // is normal — it is a message still in flight, never a failure.
   const tail = (() => {
     if (pending || ex.answered) return null;
-    if (decision === 'rejected') return 'You turned this down. Nothing was sent to the hive.';
-    return 'No reply yet. Michael has this one.';
+    if (decision === 'rejected') return '却下しました。チームには送信されていません。';
+    return '返信はまだありません。Michaelが対応中です。';
   })();
 
   return (
@@ -259,19 +259,19 @@ function ExchangeCard({
           background: 'var(--cth-lemon-light)', boxShadow: 'inset 0 0 0 1px var(--cth-lemon)',
           padding: '4px 6px 3px', ...tinyCaps, color: 'var(--cth-ink-900)'
         }}>
-          WAITING FOR YOU
+          あなたの確認待ち
         </div>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, justifyContent: 'space-between' }}>
           <span style={{ ...uiText, ...ellipsis, minWidth: 0 }} title={head.sourceName}>
-            {head.sourceName || 'unnamed source'}
+            {head.sourceName || '名前のない送信元'}
           </span>
           <span style={{ ...tinyCaps, flexShrink: 0 }}>{relTime(Date.now() - ex.latestAt)}</span>
         </div>
         <div style={{ ...muted, ...ellipsis, fontSize: 11 }} title={head.peer}>
-          {hasInbound ? 'from' : 'to'} {head.peer || 'unknown'}
+          {hasInbound ? '送信元' : '送信先'}：{head.peer || '不明'}
         </div>
         {head.title && (
           <div style={{ ...uiText, ...ellipsis, color: 'var(--cth-ink-700)' }} title={head.title}>
@@ -289,7 +289,7 @@ function ExchangeCard({
         <MessageBlock
           key={m.id}
           msg={m}
-          label={m.direction === 'inbound' ? 'THEY SENT' : hasInbound ? 'WE REPLIED' : 'WE SENT'}
+          label={m.direction === 'inbound' ? '受信' : hasInbound ? '返信' : '送信'}
           expanded={!!expanded[m.id]}
           onToggle={() => toggle(m.id)}
         />
@@ -299,8 +299,8 @@ function ExchangeCard({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ ...uiText, fontSize: 11, lineHeight: '16px', color: 'var(--cth-ink-700)' }}>
             {pending.kind === 'directive'
-              ? 'Approve and this goes to Michael, who will put the hive to work on it. Reject and it is dropped — nothing runs.'
-              : 'Approve and Michael reads this. Reject and it is dropped — nothing runs.'}
+              ? '承認するとMichaelへ届き、チームが作業を開始します。却下すると破棄され、何も実行されません。'
+              : '承認するとMichaelが読みます。却下すると破棄され、何も実行されません。'}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <PixelButton
@@ -308,18 +308,18 @@ function ExchangeCard({
               size="sm"
               disabled={!!busy[pending.id]}
               onClick={() => onDecide(pending.id, 'approved')}
-              title="Send this message through to Michael"
+              title="このメッセージをMichaelへ送る"
             >
-              {busy[pending.id] ? 'one sec…' : 'approve'}
+              {busy[pending.id] ? '処理中…' : '承認'}
             </PixelButton>
             <PixelButton
               variant="secondary"
               size="sm"
               disabled={!!busy[pending.id]}
               onClick={() => onDecide(pending.id, 'rejected')}
-              title="Drop this message. Nothing is sent"
+              title="このメッセージを破棄（送信されません）"
             >
-              reject
+              却下
             </PixelButton>
           </div>
         </div>
@@ -348,13 +348,13 @@ function EmptyState({ title, body }: { title: string; body: string }) {
 const SECTIONS: { key: Source; label: string; blurb: string }[] = [
   {
     key: 'webhook',
-    label: 'Webhooks',
-    blurb: 'Everything posted to your webhook endpoints, next to what Michael sent back.'
+    label: 'Webhook',
+    blurb: 'Webhookエンドポイントへの投稿とMichaelの返信を並べて表示します。'
   },
   {
     key: 'org',
-    label: 'Organization',
-    blurb: 'Messages from your teammates’ clone nodes, next to what Michael sent back.'
+    label: '組織',
+    blurb: 'チームメンバーのクローンノードからのメッセージとMichaelの返信を並べて表示します。'
   }
 ];
 
@@ -503,14 +503,14 @@ export function TriggerHistoryTab() {
         {exchanges.length === 0 ? (
           source === 'org' ? (
             <EmptyState
-              title="Nothing here yet, and nothing is broken."
+              title="履歴はまだありません。問題は発生していません。"
               body={'Teammate messaging is not built yet. You can set an org key and pick a mode '
                 + 'today, but no one’s clone node can reach yours until the transport ships. '
                 + 'When it does, their messages and our replies land here.'}
             />
           ) : (
             <EmptyState
-              title="No webhook messages yet."
+              title="Webhookメッセージはまだありません。"
               body={'When something posts to one of your endpoints, it lands here with Michael’s '
                 + 'reply underneath. Nothing has called in so far. Add an endpoint under Webhooks to '
                 + 'get a URL you can hand out.'}
@@ -534,13 +534,12 @@ export function TriggerHistoryTab() {
             {confirmClear ? (
               <>
                 <div style={{ ...muted, fontSize: 11, lineHeight: '16px' }}>
-                  Delete all {counts[source].total} {section.label.toLowerCase()} messages? The record
-                  is gone for good.
+                  {section.label}のメッセージ{counts[source].total}件をすべて削除しますか？履歴は完全に消去されます。
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <PixelButton variant="destructive" size="sm" onClick={clear}>delete them</PixelButton>
+                  <PixelButton variant="destructive" size="sm" onClick={clear}>削除する</PixelButton>
                   <PixelButton variant="ghost" size="sm" onClick={() => setConfirmClear(false)}>
-                    keep them
+                    残す
                   </PixelButton>
                 </div>
               </>
@@ -550,9 +549,9 @@ export function TriggerHistoryTab() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setConfirmClear(true)}
-                  title="Delete this section’s history"
+                  title="このセクションの履歴を削除"
                 >
-                  clear history
+                  履歴を消去
                 </PixelButton>
               </div>
             )}

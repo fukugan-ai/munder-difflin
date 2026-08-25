@@ -81,32 +81,26 @@ const slackLabelStyle: CSSProperties = {
 /** The exact connect walkthrough shown behind the i icon. Steps 6 & 7 spell out
  *  the both-lists requirement: subscribe to message.channels / message.groups in
  *  BOTH "Subscribe to bot events" AND "Subscribe to events on behalf of users". */
-const SLACK_CONNECT_STEPS = `Connect Munder Difflin to Slack
+const SLACK_CONNECT_STEPS = `Munder DifflinをSlackへ接続
 
-1. api.slack.com/apps -> Create New App -> From scratch. Name it
-   "Munder Difflin" and pick your workspace.
-2. Basic Information -> Signing Secret -> copy it into the
-   "Signing secret" field here.
-3. OAuth & Permissions -> Bot Token Scopes: add
-     chat:write          (office replies in-thread)
-     channels:history    (read public-channel messages)
-     groups:history      (read private-channel messages)
-   Install to workspace, then copy the Bot User OAuth Token
-   (xoxb-...) into the "Bot token" field here.
-4. Press Start (below) to launch the webhook and get your
-   Request URL.
-5. Event Subscriptions -> Enable Events -> Request URL: paste the
-   Request URL from here and wait for Slack's green check (Verified).
-6. Event Subscriptions -> "Subscribe to bot events": add
+1. api.slack.com/apps → Create New App → From scratchを選び、
+   名前を「Munder Difflin」にしてワークスペースを選択します。
+2. Basic Information → Signing Secretをコピーし、下の「署名シークレット」へ貼り付けます。
+3. OAuth & Permissions → Bot Token Scopesに次を追加します。
+     chat:write          （スレッドへ返信）
+     channels:history    （公開チャンネルを読む）
+     groups:history      （非公開チャンネルを読む）
+   ワークスペースへインストールし、Bot User OAuth Token（xoxb-...）を
+   下の「Botトークン」へ貼り付けます。
+4. 下の「開始」を押してWebhookを起動し、リクエストURLを取得します。
+5. Event Subscriptions → Enable EventsのRequest URLへ貼り付け、Verifiedになるまで待ちます。
+6. Event Subscriptions → Subscribe to bot eventsへ次を追加します。
      message.channels
      message.groups
-7. Event Subscriptions -> "Subscribe to events on behalf of users"
-   (add the matching User Token Scope channels:history / groups:history
-   first if Slack asks): add
-     message.channels
-     message.groups
-8. Save Changes, reinstall if Slack prompts, then invite the bot
-   to your channel:  /invite @MunderDifflin`;
+7. Subscribe to events on behalf of usersにも同じ2項目を追加します。
+   必要なら先にUser Token Scopeのchannels:history / groups:historyを追加してください。
+8. Save Changesを押し、求められたら再インストールして、
+   /invite @MunderDifflin でBotをチャンネルへ招待します。`;
 
 /** The request/response contract shown behind the webhook i icon. Every webhook
  *  shares one server and one tunnel and is told apart by its id in the path, so
@@ -158,6 +152,15 @@ function clearLocalState(): void {
 // voice gets its own tab; Danger Zone became a red row at the bottom of General.
 export type Section = 'General' | 'Prerequisites' | 'Agents & Models' | 'Autonomy & Budgets' | 'Connections' | 'Voice' | 'Memory & Knowledge';
 const NAV_SECTIONS: Section[] = ['General', 'Prerequisites', 'Agents & Models', 'Autonomy & Budgets', 'Connections', 'Voice', 'Memory & Knowledge'];
+const SECTION_LABEL: Record<Section, string> = {
+  General: '一般',
+  Prerequisites: '前提ツール',
+  'Agents & Models': 'エージェントとモデル',
+  'Autonomy & Budgets': '自律実行と予算',
+  Connections: '外部連携',
+  Voice: '音声',
+  'Memory & Knowledge': '記憶とナレッジ'
+};
 
 export function SettingsModal({ config, onClose, initialSection }: SettingsModalProps) {
   const [confirming, setConfirming] = useState(false);
@@ -510,7 +513,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
     setSlackBusy(true); setSlackNote('');
     try {
       await window.cth.slackSetConfig(slackPatch(slackEnabled));
-      setSlackNote('saved');
+      setSlackNote('保存しました');
     } catch (e) {
       setSlackNote(e instanceof Error ? e.message : String(e));
     } finally { setSlackBusy(false); }
@@ -527,9 +530,9 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
         setRunning(true);
         // Keep the last URL if this start returned none (tunnel hiccup) - don't blank it.
         if (res.url) setTunnelUrl(res.url);
-        setSlackNote(res.url ? 'listening' : (res.error ?? 'started, but tunnel unavailable'));
+        setSlackNote(res.url ? '待受中' : (res.error ?? '開始しましたが、トンネルを利用できません'));
       } else {
-        setSlackNote(res.error ?? 'failed to start');
+        setSlackNote(res.error ?? '開始できませんでした');
       }
     } catch (e) {
       setSlackNote(e instanceof Error ? e.message : String(e));
@@ -539,7 +542,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
   const stopSlack = async () => {
     setSlackBusy(true); setSlackNote('');
     // Keep the last Request URL visible (greyed) after Stop.
-    try { await window.cth.slackStop(); setRunning(false); setSlackNote('stopped'); }
+    try { await window.cth.slackStop(); setRunning(false); setSlackNote('停止しました'); }
     catch (e) { setSlackNote(e instanceof Error ? e.message : String(e)); }
     finally { setSlackBusy(false); }
   };
@@ -554,8 +557,8 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
     setWebhookBusy(true); setWebhookNote('');
     try {
       const res = await triggersApi().saveWebhooks(list);
-      if (res && res.ok === false) { setWebhookNote(res.error ?? 'could not save'); return; }
-      setWebhookNote('saved');
+      if (res && res.ok === false) { setWebhookNote(res.error ?? '保存できませんでした'); return; }
+      setWebhookNote('保存しました');
       setTimeout(() => setWebhookNote(''), 1500);
     } catch (e) {
       setWebhookNote(e instanceof Error ? e.message : String(e));
@@ -577,7 +580,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
     } catch (e) {
       setWebhookNote(e instanceof Error ? e.message : String(e));
     } finally { setWebhookBusy(false); }
-    if (!secret) { setWebhookNote('could not generate a secret'); return; }
+    if (!secret) { setWebhookNote('シークレットを生成できませんでした'); return; }
     const entry: WebhookTrigger = {
       id: newWebhookId(),
       name: `Webhook ${webhookTriggers.length + 1}`,
@@ -602,10 +605,10 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
     } catch (e) {
       setWebhookNote(e instanceof Error ? e.message : String(e));
     } finally { setWebhookBusy(false); }
-    if (!secret) { setWebhookNote('could not generate a secret'); return; }
+    if (!secret) { setWebhookNote('シークレットを生成できませんでした'); return; }
     setShownSecrets((s) => ({ ...s, [id]: true }));
     await patchWebhook(id, { secret });
-    setWebhookNote('new secret — copy it now');
+    setWebhookNote('新しいシークレットを今すぐコピーしてください');
   };
 
   const removeWebhook = async (id: string) => {
@@ -613,7 +616,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
     setWebhookBusy(true); setWebhookNote('');
     try {
       await triggersApi().deleteWebhook(id);
-      setWebhookNote('deleted');
+      setWebhookNote('削除しました');
       setTimeout(() => setWebhookNote(''), 1500);
     } catch (e) {
       setWebhookNote(e instanceof Error ? e.message : String(e));
@@ -635,8 +638,8 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
     setOrgBusy(true); setOrgNote('');
     try {
       const res = await triggersApi().setOrgTrigger(next);
-      if (res && res.ok === false) { setOrgNote(res.error ?? 'could not save'); return; }
-      setOrgNote('saved');
+      if (res && res.ok === false) { setOrgNote(res.error ?? '保存できませんでした'); return; }
+      setOrgNote('保存しました');
       setTimeout(() => setOrgNote(''), 1500);
     } catch (e) {
       setOrgNote(e instanceof Error ? e.message : String(e));
@@ -744,7 +747,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
           {changeHome ? (
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>New home folder</span>
+                <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>新しいホームフォルダー</span>
                 <code style={{
                   fontFamily: 'var(--cth-font-mono, monospace)', fontSize: 12,
                   color: 'var(--cth-ink-900)', wordBreak: 'break-all'
@@ -789,10 +792,10 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <PixelButton variant="secondary" size="md" onClick={() => { setChangeHome(null); setChangeErr(''); }} disabled={changeBusy}>
-                  cancel
+                  キャンセル
                 </PixelButton>
                 <PixelButton variant="primary" size="md" onClick={applyChangeHome} disabled={changeBusy}>
-                  {changeBusy ? 'applying...' : (changeMode === 'move' ? 'move & restart' : 'switch & restart')}
+                  {changeBusy ? '適用中…' : (changeMode === 'move' ? '移動して再起動' : '切り替えて再起動')}
                 </PixelButton>
               </div>
             </div>
@@ -811,18 +814,17 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                   <Icon name="bell" />
                 </div>
                 <div style={{ flex: 1, fontSize: 15, lineHeight: '22px', color: 'var(--cth-ink-700)' }}>
-                  This permanently erases all of Michael's memories and the entire hive,
-                  and cannot be undone. Any running sessions will be terminated and the app
-                  will relaunch into onboarding. Are you sure?
+                  Michaelのすべての記憶とチーム全体を完全に消去します。この操作は元に戻せません。
+                  実行中のセッションは終了し、アプリは初期設定画面で再起動します。続けますか？
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <PixelButton variant="secondary" size="md" onClick={() => setConfirming(false)} disabled={busy}>
-                  cancel
+                  キャンセル
                 </PixelButton>
                 <PixelButton variant="destructive" size="md" onClick={reset} disabled={busy}>
-                  {busy ? 'resetting...' : 'erase everything & restart'}
+                  {busy ? 'リセット中…' : 'すべて消去して再起動'}
                 </PixelButton>
               </div>
             </div>
@@ -861,7 +863,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           letterSpacing: 0
                         }}
                       >
-                        {section}
+                        {SECTION_LABEL[section]}
                       </button>
                     );
                   })}
@@ -901,14 +903,14 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Home folder
+                          ホームフォルダー
                         </div>
                         <div style={{ display: 'flex', gap: 12, fontSize: 13, lineHeight: '20px', alignItems: 'center' }}>
                           <span style={{
                             flex: 1, color: 'var(--cth-ink-900)', wordBreak: 'break-all',
                             fontFamily: 'var(--cth-font-mono, monospace)'
                           }}>{config.harnessHome ?? '—'}</span>
-                          <PixelButton variant="secondary" size="sm" onClick={pickNewHome}>change...</PixelButton>
+                          <PixelButton variant="secondary" size="sm" onClick={pickNewHome}>変更…</PixelButton>
                         </div>
                       </div>
 
@@ -920,14 +922,14 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Environment
+                          動作環境
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>Keep Mac awake while agents run</span>
+                              <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>エージェント実行中はMacをスリープさせない</span>
                               <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                                Blocks display sleep so schedules and terminals keep firing on time. Costs battery — best on AC.
+                                ディスプレイのスリープを防ぎ、スケジュールとターミナルを予定どおり動かします。電源接続時の利用がおすすめです。
                               </span>
                             </div>
                             <PixelButton variant={keepAwake ? 'primary' : 'secondary'} size="sm" onClick={toggleKeepAwake}>
@@ -936,13 +938,13 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>Explain things simply</span>
+                              <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>分かりやすく説明する</span>
                               <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                                Agents brief you in plain language instead of engineering shorthand.
+                                技術的な略語を避け、平易な言葉で報告します。
                               </span>
                             </div>
                             <PixelButton variant={simpleMode ? 'primary' : 'secondary'} size="sm" onClick={toggleSimpleMode}>
-                              {simpleMode ? 'on' : 'off'}
+                              {simpleMode ? 'オン' : 'オフ'}
                             </PixelButton>
                           </div>
                         </div>
@@ -956,15 +958,15 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Notifications
+                          通知
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Desktop notifications
+                              デスクトップ通知
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Native toasts when an agent finishes or needs your input.
+                              エージェントの完了時や入力が必要なときにOS通知を表示します。
                             </span>
                           </div>
                           <PixelButton
@@ -972,7 +974,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             size="sm"
                             onClick={toggleNotifications}
                           >
-                            {notifications ? 'on' : 'off'}
+                            {notifications ? 'オン' : 'オフ'}
                           </PixelButton>
                         </div>
                       </div>
@@ -985,17 +987,16 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Maintenance
+                          メンテナンス
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Scheduled auto-compact
+                              定期的な自動コンパクト
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Queue /compact for every agent on a schedule (hourly by default; interval
-                              in the Triggers tab). Off by default — long-running agents may overflow
-                              their context without it.
+                              スケジュールに従って全エージェントへ /compact を送ります（既定は1時間ごと、間隔はトリガータブで設定）。
+                              初期設定はオフです。長時間動くエージェントは、未設定だとコンテキスト上限に達する場合があります。
                             </span>
                           </div>
                           <PixelButton
@@ -1003,18 +1004,18 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             size="sm"
                             onClick={toggleAutoCompact}
                           >
-                            {autoCompactOn ? 'on' : 'off'}
+                            {autoCompactOn ? 'オン' : 'オフ'}
                           </PixelButton>
                         </div>
                         <div style={{ height: 10 }} />
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Auto-update
+                              自動更新
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Check GitHub releases and download updates in the background;
-                              you choose when to restart. Never restarts on its own.
+                              GitHubのリリースを確認し、バックグラウンドで更新をダウンロードします。
+                              再起動するタイミングはあなたが選び、自動で再起動することはありません。
                             </span>
                           </div>
                           <PixelButton
@@ -1022,18 +1023,18 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             size="sm"
                             onClick={toggleAutoUpdate}
                           >
-                            {autoUpdateOn ? 'on' : 'off'}
+                            {autoUpdateOn ? 'オン' : 'オフ'}
                           </PixelButton>
                         </div>
                         <div style={{ height: 10 }} />
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Anonymous usage stats
+                              匿名の利用統計
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              A handful of anonymous events (app opened, agent spawned, feature used) —
-                              never prompts, code, paths, or agent output. Full list in TELEMETRY.md.
+                              アプリ起動、エージェント追加、機能利用などの匿名イベントだけを送信します。
+                              プロンプト、コード、パス、エージェントの出力は含みません。詳細はTELEMETRY.mdにあります。
                             </span>
                           </div>
                           <PixelButton
@@ -1041,7 +1042,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             size="sm"
                             onClick={toggleTelemetry}
                           >
-                            {telemetryOn ? 'on' : 'off'}
+                            {telemetryOn ? 'オン' : 'オフ'}
                           </PixelButton>
                         </div>
                       </div>
@@ -1065,12 +1066,12 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Default agent model
+                          既定のエージェントモデル
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                            Every newly spawned Claude agent (Michael included) starts on this model unless picked per-agent.
-                            Marked “· default” in the model pickers.
+                            エージェントごとに選ばない限り、新しく起動するClaudeエージェント（Michaelを含む）はこのモデルを使います。
+                            モデル選択では「· 既定」と表示されます。
                           </span>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             {AGENT_MODELS.map((m) => (
@@ -1102,18 +1103,18 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Advanced
+                          詳細設定
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ fontSize: 13, color: 'var(--cth-ink-900)' }}>Max turns per run</span>
+                          <span style={{ fontSize: 13, color: 'var(--cth-ink-900)' }}>1回の最大ターン数</span>
                           <input
                             type="number" min="1" step="10" value={maxTurnsVal}
                             onChange={(e) => setMaxTurnsVal(e.target.value)}
                             onBlur={() => void saveMaxTurns()}
-                            placeholder="unlimited"
+                            placeholder="無制限"
                             style={{ ...slackInputStyle, width: 120 }}
                           />
-                          <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>blank = unlimited</span>
+                          <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>空欄＝無制限</span>
                         </div>
                       </div>
                     </>
@@ -1127,19 +1128,19 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Autonomy
+                          自律実行
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              {autoModeOn ? 'Autonomous — agents act without asking' : 'Ask-first — agents pause for tool approval'}
+                              {autoModeOn ? '自律実行 — 確認せずに進める' : '事前確認 — ツール実行前に停止する'}
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Applies to newly spawned agents (each agent's command can still override).
+                              新しく起動するエージェントに適用されます（個別のコマンドで上書きできます）。
                             </span>
                           </div>
                           <PixelButton variant={autoModeOn ? 'primary' : 'secondary'} size="sm" onClick={toggleAutoMode}>
-                            {autoModeOn ? 'autonomous' : 'ask-first'}
+                            {autoModeOn ? '自律実行' : '事前確認'}
                           </PixelButton>
                         </div>
                       </div>
@@ -1150,16 +1151,16 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Who can add agents
+                              エージェントを追加できる人
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
                               {orchSpawnOn
-                                ? 'Michael can hire on his own. Every agent he starts spends tokens you did not approve.'
-                                : 'Only you. Michael can still ask, and his request waits in the queue instead of failing.'}
+                                ? 'Michaelも自分で追加できます。Michaelが起動したエージェントもトークンを消費します。'
+                                : 'あなただけです。Michaelからの追加依頼は失敗せず、キューで承認を待ちます。'}
                             </span>
                           </div>
                           <PixelButton variant={orchSpawnOn ? 'primary' : 'secondary'} size="sm" onClick={toggleOrchSpawn}>
-                            {orchSpawnOn ? 'me and Michael' : 'only me'}
+                            {orchSpawnOn ? '私とMichael' : '私だけ'}
                           </PixelButton>
                         </div>
                       </div>
@@ -1172,21 +1173,21 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Circuit breaker
+                          サーキットブレーカー
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Guard against runaway agents and spend. The breaker steers, then constrains, then stops an agent that crosses these.
+                              エージェントの暴走と過剰利用を防ぎます。上限を超えると、指示、制限、停止の順に制御します。
                             </span>
                             <PixelButton variant={brkEnabled ? 'primary' : 'secondary'} size="sm"
                               onClick={() => { setBrkEnabled(!brkEnabled); }}>
-                              {brkEnabled ? 'on' : 'off'}
+                              {brkEnabled ? 'オン' : 'オフ'}
                             </PixelButton>
                           </div>
                           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, ...slackLabelStyle }}>
-                              floor token budget
+                              チームのトークン予算
                               <input
                                 type="number" min="0" step="100000" value={agentBudget}
                                 onChange={(e) => setAgentBudget(e.target.value)}
@@ -1194,11 +1195,11 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                 style={{ ...slackInputStyle, width: 180 }}
                               />
                               <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>
-                                {fmtBudgetTokens(agentBudget) ? `= ${fmtBudgetTokens(agentBudget)} tokens` : 'total tokens across the floor'}
+                                {fmtBudgetTokens(agentBudget) ? `= ${fmtBudgetTokens(agentBudget)}トークン` : 'チーム全体の合計トークン'}
                               </span>
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, ...slackLabelStyle }}>
-                              token velocity (tok/min)
+                              トークン速度（tok/分）
                               <input
                                 type="number" min="0" step="1000" value={velocityCeiling}
                                 onChange={(e) => setVelocityCeiling(e.target.value)}
@@ -1207,38 +1208,38 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               />
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, ...slackLabelStyle }}>
-                              repeated-tool limit
+                              同一ツールの反復上限
                               <input
                                 type="number" min="0" step="5" value={brkRepeated}
                                 onChange={(e) => setBrkRepeated(e.target.value)}
-                                placeholder="default"
+                                placeholder="既定値"
                                 style={{ ...slackInputStyle, width: 140 }}
                               />
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, ...slackLabelStyle }}>
-                              error-storm limit
+                              連続エラー上限
                               <input
                                 type="number" min="0" step="5" value={brkErrStorm}
                                 onChange={(e) => setBrkErrStorm(e.target.value)}
-                                placeholder="default"
+                                placeholder="既定値"
                                 style={{ ...slackInputStyle, width: 140 }}
                               />
                             </label>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>Hard stop</span>
+                              <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>強制停止</span>
                               <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                                When tripped, KILL the agent instead of just constraining it. Off = steer-first (recommended).
+                                作動時に制限だけでなくエージェントを終了します。オフの場合はまず指示で修正します（推奨）。
                               </span>
                             </div>
                             <PixelButton variant={brkHardStop ? 'destructive' : 'secondary'} size="sm"
                               onClick={() => { setBrkHardStop(!brkHardStop); }}>
-                              {brkHardStop ? 'kill on trip' : 'steer first'}
+                              {brkHardStop ? '作動時に終了' : 'まず指示'}
                             </PixelButton>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <PixelButton variant="secondary" size="sm" onClick={saveBudget}>save</PixelButton>
+                            <PixelButton variant="secondary" size="sm" onClick={saveBudget}>保存</PixelButton>
                             {budgetNote && <span style={{ fontSize: 12, color: 'var(--cth-mint)' }}>{budgetNote}</span>}
                           </div>
                         </div>
@@ -1254,17 +1255,17 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Semantic memory
+                          セマンティック記憶
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>Cross-session recall</span>
+                            <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>セッションをまたぐ記憶</span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Agents' markdown memory is indexed for instant search. The embedding model lives in the Memory panel.
+                              エージェントのMarkdown記憶を索引化してすぐ検索できます。埋め込みモデルは記憶パネルで設定します。
                             </span>
                           </div>
                           <PixelButton variant={semMemOn ? 'primary' : 'secondary'} size="sm" onClick={toggleSemMem}>
-                            {semMemOn ? 'on' : 'off'}
+                            {semMemOn ? 'オン' : 'オフ'}
                           </PixelButton>
                         </div>
                       </div>
@@ -1277,15 +1278,15 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
                         }}>
-                          Knowledge Graph
+                          ナレッジグラフ
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Enterprise knowledge base
+                              組織向けナレッジベース
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Add your docs, images &amp; PDFs; agents query them on demand via the <code>kg</code> tool.
+                              文書、画像、PDFを追加すると、エージェントが<code>kg</code>ツールで必要に応じて検索します。
                             </span>
                           </div>
                           <PixelButton
@@ -1293,16 +1294,16 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             size="sm"
                             onClick={toggleKg}
                           >
-                            {kgEnabled ? 'on' : 'off'}
+                            {kgEnabled ? 'オン' : 'オフ'}
                           </PixelButton>
                         </div>
                         {kgEnabled && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
                             <PixelButton variant="secondary" size="sm" onClick={addKgFiles} disabled={kgBusy}>
-                              {kgBusy ? 'adding…' : 'add files…'}
+                              {kgBusy ? '追加中…' : 'ファイルを追加…'}
                             </PixelButton>
                             <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>
-                              {kgDocCount} document{kgDocCount === 1 ? '' : 's'} indexed
+                              {kgDocCount}件の文書を索引化済み
                             </span>
                             {kgNote && <span style={{ fontSize: 12, color: 'var(--cth-mint)' }}>{kgNote}</span>}
                           </div>
@@ -1339,11 +1340,11 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Slack integration
+                              Slack連携
                               {/* i - toggles the step-by-step connect guide. */}
                               <button
                                 type="button"
-                                aria-label="Show Slack connect steps"
+                                aria-label="Slack接続手順を表示"
                                 aria-expanded={showSlackHelp}
                                 onClick={() => setShowSlackHelp((v) => !v)}
                                 style={{
@@ -1357,7 +1358,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               >i</button>
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Pipe a Slack channel's messages straight into Michael's queue.
+                              SlackチャンネルのメッセージをMichaelのキューへ直接送ります。
                             </span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1366,14 +1367,14 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               fontSize: 12, lineHeight: '16px',
                               color: running ? 'var(--cth-mint-700, #1f7a4d)' : 'var(--cth-ink-500)'
                             }}>
-                              {running ? '● Connected' : '○ Not connected'}
+                              {running ? '● 接続済み' : '○ 未接続'}
                             </span>
                             <PixelButton
                               variant={slackEnabled ? 'primary' : 'secondary'}
                               size="sm"
                               onClick={() => setSlackEnabled((v) => !v)}
                             >
-                              {slackEnabled ? 'on' : 'off'}
+                              {slackEnabled ? 'オン' : 'オフ'}
                             </PixelButton>
                           </div>
                         </div>
@@ -1395,7 +1396,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             {/* Signing secret + bot token side-by-side in the wider layout */}
                             <div style={{ display: 'flex', gap: 16 }}>
                               <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                                <span style={slackLabelStyle}>Signing secret</span>
+                                <span style={slackLabelStyle}>署名シークレット</span>
                                 <input
                                   type="password"
                                   value={slackSecret}
@@ -1406,7 +1407,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               </label>
                               {/* Bot token: stays in main; never leaves the main process. */}
                               <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                                <span style={slackLabelStyle}>Bot token</span>
+                                <span style={slackLabelStyle}>Botトークン</span>
                                 <input
                                   type="password"
                                   value={slackBotToken}
@@ -1419,16 +1420,16 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
 
                             <div style={{ display: 'flex', gap: 16 }}>
                               <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                                <span style={slackLabelStyle}>Channel id (optional)</span>
+                                <span style={slackLabelStyle}>チャンネルID（任意）</span>
                                 <input
                                   value={slackChannel}
                                   onChange={(e) => setSlackChannel(e.target.value)}
-                                  placeholder="C0123... or blank for any"
+                                  placeholder="C0123...（すべて対象なら空欄）"
                                   style={{ ...slackInputStyle, fontFamily: 'var(--cth-font-mono)' }}
                                 />
                               </label>
                               <label style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 100 }}>
-                                <span style={slackLabelStyle}>Port</span>
+                                <span style={slackLabelStyle}>ポート</span>
                                 <input
                                   type="number"
                                   value={slackPort}
@@ -1445,27 +1446,27 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                 Slack-ORIGIN done-reply round-trip is never gated. */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
                               <span style={slackLabelStyle}>
-                                Proactive posting (app-initiated) — off by default
+                                アプリからの能動的な投稿 — 初期設定はオフ
                               </span>
                               <PixelButton
                                 variant={slackProactivePosting ? 'primary' : 'secondary'}
                                 size="sm"
                                 onClick={() => setSlackProactivePosting((v) => !v)}
                               >
-                                {slackProactivePosting ? 'on' : 'off'}
+                                {slackProactivePosting ? 'オン' : 'オフ'}
                               </PixelButton>
                             </div>
 
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                               {/* Start disabled once connected; Stop only when running. */}
                               <PixelButton variant="primary" size="sm" onClick={startSlack} disabled={slackBusy || !slackSecret.trim() || running}>
-                                {slackBusy ? '...' : running ? 'connected' : 'start'}
+                                {slackBusy ? '...' : running ? '接続済み' : '開始'}
                               </PixelButton>
                               <PixelButton variant="secondary" size="sm" onClick={stopSlack} disabled={slackBusy || !running}>
-                                stop
+                                停止
                               </PixelButton>
                               <PixelButton variant="ghost" size="sm" onClick={saveSlack} disabled={slackBusy}>
-                                save
+                                保存
                               </PixelButton>
                               {slackNote && (
                                 <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>{slackNote}</span>
@@ -1479,8 +1480,8 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, opacity: running ? 1 : 0.55 }}>
                                 <span style={slackLabelStyle}>
                                   {running
-                                    ? 'Request URL - paste into Slack Event Subscriptions'
-                                    : 'last Request URL - Slack reuses it until you Stop'}
+                                    ? 'リクエストURL — SlackのEvent Subscriptionsへ貼り付け'
+                                    : '前回のリクエストURL — 停止するまでSlackが再利用します'}
                                 </span>
                                 <div style={{ display: 'flex', gap: 6 }}>
                                   <input
@@ -1489,16 +1490,16 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                     onFocus={(e) => e.currentTarget.select()}
                                     style={{ ...slackInputStyle, fontFamily: 'var(--cth-font-mono)', fontSize: 12 }}
                                   />
-                                  <PixelButton variant="secondary" size="sm" onClick={copyTunnel} disabled={!tunnelUrl}>copy</PixelButton>
+                                  <PixelButton variant="secondary" size="sm" onClick={copyTunnel} disabled={!tunnelUrl}>コピー</PixelButton>
                                 </div>
                               </div>
                             )}
 
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              In your Slack app: enable Event Subscriptions, add the{' '}
-                              <code>message.channels</code> / <code>message.groups</code> bot event, set the
-                              Request URL above, and reinstall to your workspace. The tunnel URL changes on every
-                              restart, so re-paste it after pressing Start again.
+                              SlackアプリでEvent Subscriptionsを有効にし、Botイベントに{' '}
+                              <code>message.channels</code> / <code>message.groups</code>を追加して、上のリクエストURLを設定します。
+                              その後ワークスペースへ再インストールしてください。トンネルURLは再起動のたびに変わるため、
+                              再度「開始」を押した後に貼り直します。
                             </span>
                           </div>
                         )}
@@ -1515,15 +1516,15 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 2
                         }}>
-                          Webhook triggers
+                          Webhookトリガー
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Webhook triggers
+                              Webhookトリガー
                               <button
                                 type="button"
-                                aria-label="Show webhook API format"
+                                aria-label="Webhook API形式を表示"
                                 aria-expanded={showWebhookHelp}
                                 onClick={() => setShowWebhookHelp((v) => !v)}
                                 style={{
@@ -1537,8 +1538,8 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               >i</button>
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              One endpoint per caller, each with its own secret and mode. They all share
-                              one server, so another webhook costs nothing.
+                              送信元ごとに専用のシークレットとモードを持つエンドポイントを作成します。
+                              すべて同じサーバーを共有するため、Webhookを追加しても追加費用はかかりません。
                             </span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1546,10 +1547,10 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               fontSize: 12, lineHeight: '16px',
                               color: webhookRunning ? 'var(--cth-mint-700, #1f7a4d)' : 'var(--cth-ink-500)'
                             }}>
-                              {webhookRunning ? '● Listening' : '○ Not listening'}
+                              {webhookRunning ? '● 待受中' : '○ 停止中'}
                             </span>
                             <PixelButton variant="primary" size="sm" onClick={addWebhook} disabled={webhookBusy}>
-                              add webhook
+                              Webhookを追加
                             </PixelButton>
                           </div>
                         </div>
@@ -1566,13 +1567,13 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
 
                         {/* Public surface warning. Loud, not buried. */}
                         <span style={{ fontSize: 12, lineHeight: '16px', color: '#6E1423' }}>
-                          Every webhook you switch on is a PUBLIC endpoint anyone holding its secret can post to.
-                          New ones arrive off.
+                          有効にしたWebhookは公開エンドポイントです。シークレットを知る相手は誰でも送信できます。
+                          新規Webhookはオフで作成されます。
                         </span>
 
                         {webhookTriggers.length === 0 ? (
                           <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                            No webhooks yet. Add one to give a tool a URL it can hand work to.
+                            Webhookはまだありません。追加すると、ツールから作業を受け取るURLを発行できます。
                           </span>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1597,7 +1598,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                       value={w.name}
                                       onChange={(e) => { void patchWebhook(w.id, { name: e.target.value }, false); }}
                                       onBlur={() => { void applyWebhooks(webhookTriggers); }}
-                                      placeholder="what calls this?"
+                                      placeholder="送信元の名前"
                                       style={{ ...slackInputStyle, flex: 1 }}
                                     />
                                     <PixelButton
@@ -1606,7 +1607,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                       onClick={() => { void patchWebhook(w.id, { enabled: !w.enabled }); }}
                                       disabled={webhookBusy}
                                     >
-                                      {w.enabled ? 'on' : 'off'}
+                                      {w.enabled ? 'オン' : 'オフ'}
                                     </PixelButton>
                                     {/* Two clicks: deleting revokes a caller's access for good. */}
                                     <PixelButton
@@ -1618,7 +1619,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                       }}
                                       disabled={webhookBusy}
                                     >
-                                      {pendingDelete === w.id ? 'sure?' : 'delete'}
+                                      {pendingDelete === w.id ? '本当に削除？' : '削除'}
                                     </PixelButton>
                                   </div>
 
@@ -1626,7 +1627,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                     <span style={{ ...slackLabelStyle, width: 56, flexShrink: 0 }}>URL</span>
                                     <input
                                       readOnly
-                                      value={endpoint || 'starts once the webhook server is listening'}
+                                      value={endpoint || 'Webhookサーバーの待受開始後に表示されます'}
                                       onFocus={(e) => e.currentTarget.select()}
                                       style={{
                                         ...slackInputStyle, fontFamily: 'var(--cth-font-mono)', fontSize: 12,
@@ -1639,13 +1640,13 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                       onClick={() => { void window.cth.copyToClipboard(endpoint); }}
                                       disabled={!endpoint}
                                     >
-                                      copy
+                                      コピー
                                     </PixelButton>
                                   </div>
 
                                   {/* Masked by default; never in a title attribute. */}
                                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                    <span style={{ ...slackLabelStyle, width: 56, flexShrink: 0 }}>Secret</span>
+                                    <span style={{ ...slackLabelStyle, width: 72, flexShrink: 0 }}>シークレット</span>
                                     <input
                                       type={shown ? 'text' : 'password'}
                                       readOnly
@@ -1658,14 +1659,14 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                       size="sm"
                                       onClick={() => setShownSecrets((s) => ({ ...s, [w.id]: !shown }))}
                                     >
-                                      {shown ? 'hide' : 'show'}
+                                      {shown ? '隠す' : '表示'}
                                     </PixelButton>
                                     <PixelButton
                                       variant="secondary"
                                       size="sm"
                                       onClick={() => { void window.cth.copyToClipboard(w.secret); }}
                                     >
-                                      copy
+                                      コピー
                                     </PixelButton>
                                     <PixelButton
                                       variant="ghost"
@@ -1673,12 +1674,12 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                                       onClick={() => { void rotateWebhookSecret(w.id); }}
                                       disabled={webhookBusy}
                                     >
-                                      rotate
+                                      再生成
                                     </PixelButton>
                                   </div>
 
                                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                    <span style={{ ...slackLabelStyle, width: 56, flexShrink: 0 }}>Mode</span>
+                                    <span style={{ ...slackLabelStyle, width: 72, flexShrink: 0 }}>モード</span>
                                     <select
                                       value={w.mode}
                                       onChange={(e) => { void patchWebhook(w.id, { mode: e.target.value as TriggerMode }); }}
@@ -1699,10 +1700,9 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                         )}
 
                         <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                          Callers POST to a webhook's URL with its secret in the{' '}
-                          <code>x-md-webhook-secret</code> header. Each one checks bodies against its own JSON
-                          schema — edit that in the Triggers tab of Michael's Command Center, where the history
-                          of everything that arrived lives too.
+                          送信元はWebhookのURLへPOSTし、シークレットを{' '}
+                          <code>x-md-webhook-secret</code>ヘッダーへ指定します。本文はエンドポイント固有のJSON Schemaで検証されます。
+                          Schemaの編集と受信履歴の確認は、Michaelのコマンドセンターにある「トリガー」タブで行えます。
                         </span>
 
                         {webhookNote && (
@@ -1719,15 +1719,15 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                           color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 2
                         }}>
-                          Organisation
+                          組織
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Organisation key
+                              組織キー
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              How a teammate's install addresses yours.
+                              チームメンバーのMunder Difflinから、この環境を識別するためのキーです。
                             </span>
                           </div>
                           <PixelButton
@@ -1736,19 +1736,19 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             onClick={() => { void applyOrg({ ...orgTrigger, enabled: !orgTrigger.enabled }); }}
                             disabled={orgBusy}
                           >
-                            {orgTrigger.enabled ? 'on' : 'off'}
+                            {orgTrigger.enabled ? 'オン' : 'オフ'}
                           </PixelButton>
                         </div>
 
                         <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span style={slackLabelStyle}>API key</span>
+                          <span style={slackLabelStyle}>APIキー</span>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <input
                               type={showOrgKey ? 'text' : 'password'}
                               value={orgTrigger.apiKey}
                               onChange={(e) => { void applyOrg({ ...orgTrigger, apiKey: e.target.value }, false); }}
                               onBlur={() => { void applyOrg(orgTrigger); }}
-                              placeholder="paste your organisation key"
+                              placeholder="組織キーを貼り付け"
                               style={{ ...slackInputStyle, fontFamily: 'var(--cth-font-mono)' }}
                             />
                             <PixelButton
@@ -1757,7 +1757,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               onClick={() => setShowOrgKey((v) => !v)}
                               disabled={!orgTrigger.apiKey}
                             >
-                              {showOrgKey ? 'hide' : 'show'}
+                              {showOrgKey ? '隠す' : '表示'}
                             </PixelButton>
                           </div>
                         </label>
@@ -1767,7 +1767,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                         </span>
 
                         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 200 }}>
-                          <span style={slackLabelStyle}>Mode</span>
+                          <span style={slackLabelStyle}>モード</span>
                           <select
                             value={orgTrigger.mode}
                             onChange={(e) => { void applyOrg({ ...orgTrigger, mode: e.target.value as TriggerMode }); }}
@@ -1784,7 +1784,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
 
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <PixelButton variant="ghost" size="sm" onClick={() => { void applyOrg(orgTrigger); }} disabled={orgBusy}>
-                            save
+                            保存
                           </PixelButton>
                           {orgNote && (
                             <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>{orgNote}</span>
@@ -1792,8 +1792,8 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                         </div>
 
                         <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                          Configuration only for now. The organisation messaging service does not exist yet, so a
-                          key here starts no transport — it is saved, shown in the Triggers tab, and waits.
+                          現在は設定のみです。組織メッセージサービスは未提供のため、キーを設定しても通信は始まりません。
+                          保存され、トリガータブに表示されます。
                         </span>
                       </div>
 
@@ -1814,10 +1814,10 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                              Free Flow (voice dictation)
+                              Free Flow（音声入力）
                             </span>
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Push-to-talk dictation: speak, and Groq Whisper drops the text into the queue composer.
+                              ボタンを押して話すと、Groq Whisperが文字に変換してキュー入力欄へ追加します。
                             </span>
                           </div>
                           <PixelButton
@@ -1826,7 +1826,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             onClick={toggleFreeflow}
                             disabled={freeflowBusy}
                           >
-                            {freeflowEnabled ? 'on' : 'off'}
+                              {freeflowEnabled ? 'オン' : 'オフ'}
                           </PixelButton>
                         </div>
 
@@ -1834,37 +1834,37 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             {/* Groq API key — stored in main config, used only there. */}
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span style={slackLabelStyle}>Groq API key</span>
+                              <span style={slackLabelStyle}>Groq APIキー</span>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <input
                                   type={showGroqKey ? 'text' : 'password'}
                                   value={groqKey}
                                   onChange={(e) => setGroqKey(e.target.value)}
-                                  placeholder="gsk_... (get a free key at console.groq.com)"
+                                  placeholder="gsk_...（console.groq.comで無料キーを取得）"
                                   style={{ ...slackInputStyle, fontFamily: 'var(--cth-font-mono)' }}
                                 />
                                 <PixelButton variant="secondary" size="sm" onClick={() => setShowGroqKey((v) => !v)} disabled={!groqKey}>
-                                  {showGroqKey ? 'hide' : 'show'}
+                                  {showGroqKey ? '隠す' : '表示'}
                                 </PixelButton>
                               </div>
                             </label>
 
                             {/* Model picker */}
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 280 }}>
-                              <span style={slackLabelStyle}>Model</span>
+                              <span style={slackLabelStyle}>モデル</span>
                               <select
                                 value={freeflowModel}
                                 onChange={(e) => setFreeflowModel(e.target.value)}
                                 style={{ ...slackInputStyle, fontFamily: 'var(--cth-font-mono)' }}
                               >
-                                <option value="whisper-large-v3-turbo">whisper-large-v3-turbo (fast)</option>
-                                <option value="whisper-large-v3">whisper-large-v3 (accurate)</option>
+                                <option value="whisper-large-v3-turbo">whisper-large-v3-turbo（高速）</option>
+                                <option value="whisper-large-v3">whisper-large-v3（高精度）</option>
                               </select>
                             </label>
 
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                               <PixelButton variant="ghost" size="sm" onClick={() => saveFreeflow()} disabled={freeflowBusy}>
-                                save
+                                保存
                               </PixelButton>
                               {freeflowNote && (
                                 <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>{freeflowNote}</span>
@@ -1872,11 +1872,10 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             </div>
 
                             <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                              Two ways to dictate: click the mic button above Send in the queue composer (click to record,
-                              click again to transcribe), or — while viewing any agent's terminal — <strong>hold Option
-                              (⌥)</strong> to talk and release to transcribe. Either way the text lands in the composer
-                              draft for you to review before sending. macOS will ask for microphone permission the first
-                              time you record.
+                              音声入力には2つの方法があります。キュー入力欄の送信ボタン上にあるマイクをクリック
+                              （録音開始、再クリックで文字変換）するか、エージェントのターミナル表示中に
+                              <strong>Option（⌥）を長押し</strong>して話し、離すと文字に変換します。
+                              どちらも送信前に確認できる下書きへ入ります。初回録音時はmacOSがマイクの許可を求めます。
                             </span>
                           </div>
                         )}
@@ -1894,11 +1893,11 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-900)' }}>
-                            Voice chat with Michael
+                            Michaelと音声会話
                           </span>
                           <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                            Talk to the orchestrator in real time. Toggle it on from Michael's tab; choose which
-                            microphone and speaker the voice loop uses here.
+                            オーケストレーターとリアルタイムに会話します。Michaelのタブでオンにし、
+                            ここで使用するマイクとスピーカーを選びます。
                           </span>
                         </div>
 
@@ -1919,19 +1918,16 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
                             color: 'var(--cth-ink-500)', textTransform: 'uppercase'
                           }}>
-                            OpenAI API key · voice
+                            OpenAI APIキー · 音声
                           </span>
                           <span style={{ fontSize: 12, lineHeight: '17px', color: 'var(--cth-ink-700)' }}>
-                            Talking to Michael runs on OpenAI&rsquo;s Realtime API — speech in, speech out, over a
-                            live connection to <strong style={{ fontFamily: 'var(--cth-font-mono)' }}>{REALTIME_MODEL}</strong>.
-                            That is a different service from the Claude subscription your agents run on, so it needs
-                            its own <strong>OpenAI API key</strong>.
+                            Michaelとの音声会話はOpenAI Realtime APIを使い、
+                            <strong style={{ fontFamily: 'var(--cth-font-mono)' }}>{REALTIME_MODEL}</strong>へ接続して音声を送受信します。
+                            エージェントが使うClaudeのサブスクリプションとは別のサービスなので、<strong>OpenAI APIキー</strong>が必要です。
                           </span>
                           <span style={{ fontSize: 12, lineHeight: '17px', color: 'var(--cth-ink-700)' }}>
-                            Paste it once below. It is encrypted on this machine and never shown again — each voice
-                            session mints its own short-lived token from it, and the key itself never leaves your
-                            computer. It is the same OpenAI key listed under <strong>Agents &amp; Models</strong>;
-                            setting it in either place is enough.
+                            下へ一度貼り付けると、このPC上で暗号化され、再表示されません。音声セッションごとに短時間だけ有効な
+                            トークンを発行し、キー自体はPCから送出されません。<strong>エージェントとモデル</strong>にあるOpenAIキーと同じため、どちらか一方で設定すれば十分です。
                           </span>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                             <input
@@ -1948,7 +1944,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               onClick={() => void saveOpenAiVoiceKey()}
                               disabled={!openAiVoiceKey.trim()}
                             >
-                              Save
+                              保存
                             </PixelButton>
                           </div>
                           <span style={{
@@ -1972,7 +1968,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                         {/* rt-9 idle-tunable: how long an idle voice session stays open before
                             it auto-closes. The spend cap remains the real runaway guard. */}
                         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 280 }}>
-                          <span style={slackLabelStyle}>Idle auto-disconnect</span>
+                          <span style={slackLabelStyle}>無音時の自動切断</span>
                           <select
                             value={String(idleDisconnectMs)}
                             onChange={(e) => {
@@ -1982,17 +1978,17 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                             }}
                             style={{ ...slackInputStyle, fontFamily: 'var(--cth-font-mono)' }}
                           >
-                            <option value="30000">30 seconds</option>
-                            <option value="60000">1 minute</option>
-                            <option value="120000">2 minutes</option>
-                            <option value="180000">3 minutes</option>
-                            <option value="300000">5 minutes</option>
-                            <option value="600000">10 minutes</option>
-                            <option value="0">Off (never)</option>
+                            <option value="30000">30秒</option>
+                            <option value="60000">1分</option>
+                            <option value="120000">2分</option>
+                            <option value="180000">3分</option>
+                            <option value="300000">5分</option>
+                            <option value="600000">10分</option>
+                            <option value="0">オフ（切断しない）</option>
                           </select>
                           <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                            How long the voice session stays open with no talking before it auto-closes.
-                            The spend cap still stops a runaway session even when this is off.
+                            会話がない状態で音声セッションを維持する時間です。
+                            オフでも利用上限に達するとセッションを停止します。
                           </span>
                         </label>
                       </div>
@@ -2005,15 +2001,14 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                       <div style={{
                         fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px',
                         color: '#6E1423'
-                      }}>DANGER ZONE</div>
+                      }}>危険な操作</div>
                       <p style={{ margin: 0, fontSize: 13, lineHeight: '20px', color: 'var(--cth-ink-700)' }}>
-                        Reset wipes Michael's memories, the entire hive (every agent, message,
-                        task, and the board), the semantic-memory palace, and all settings -
-                        then takes you back to onboarding.
+                        リセットすると、Michaelの記憶、チーム全体（全エージェント、メッセージ、タスク、ボード）、
+                        セマンティック記憶、すべての設定を消去し、初期設定へ戻ります。
                       </p>
                       <div>
                         <PixelButton variant="destructive" size="md" onClick={() => setConfirming(true)}>
-                          reset &amp; start over
+                          リセットして最初から始める
                         </PixelButton>
                       </div>
                     </div>
@@ -2029,7 +2024,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                 display: 'flex', justifyContent: 'flex-end',
                 background: 'var(--cth-cream-50)'
               }}>
-                <PixelButton variant="secondary" size="md" onClick={onClose}>close</PixelButton>
+                <PixelButton variant="secondary" size="md" onClick={onClose}>閉じる</PixelButton>
               </div>
             </>
           )}

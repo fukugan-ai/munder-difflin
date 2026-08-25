@@ -102,12 +102,12 @@ export function HistoryPane({ gitRoot, onOpenRevDiff }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-        {loading && commits.length === 0 && <div style={noteStyle}>loading history…</div>}
-        {!loading && commits.length === 0 && <div style={noteStyle}>no commits</div>}
+        {loading && commits.length === 0 && <div style={noteStyle}>履歴を読み込み中…</div>}
+        {!loading && commits.length === 0 && <div style={noteStyle}>コミットなし</div>}
         <CommitGraph commits={commits} currentBranch={branch} onCommitClick={(sha) => { void pick(sha); }} />
         {commits.length >= page * 200 && (
           <div style={{ padding: '4px 12px' }}>
-            <button style={smallBtn} onClick={() => setPage((p) => p + 1)}>load older…</button>
+            <button style={smallBtn} onClick={() => setPage((p) => p + 1)}>以前の履歴を読み込む…</button>
           </div>
         )}
       </div>
@@ -124,19 +124,19 @@ export function HistoryPane({ gitRoot, onOpenRevDiff }: {
             <span style={{
               flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
             }} title={selected.subject}>{selected.subject}</span>
-            <button style={smallBtn} onClick={() => void jump(selected)} title="Check out this commit (detached HEAD)">
-              <Icon name="arrow-right" /> jump here
+            <button style={smallBtn} onClick={() => void jump(selected)} title="このコミットをチェックアウト（detached HEAD）">
+              <Icon name="arrow-right" /> ここへ移動
             </button>
-            <button style={{ ...smallBtn, width: 20, justifyContent: 'center' }} onClick={() => setSelected(null)} title="Close">✕</button>
+            <button style={{ ...smallBtn, width: 20, justifyContent: 'center' }} onClick={() => setSelected(null)} title="閉じる">✕</button>
           </div>
           {/* `flex: 1` is load-bearing: without it this scroller sizes to its
               CONTENT, overflows the parent's maxHeight and never reaches its own
               scroll threshold, so a commit touching many files runs off the
               bottom with no way to scroll to the rest. */}
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-            {!files && !note && <div style={noteStyle}>loading files…</div>}
+            {!files && !note && <div style={noteStyle}>ファイルを読み込み中…</div>}
             {note && <div style={{ ...noteStyle, color: 'var(--cth-ink-700)' }}>{note}</div>}
-            {files && files.length === 0 && <div style={noteStyle}>no file changes (merge?)</div>}
+            {files && files.length === 0 && <div style={noteStyle}>ファイル変更なし（マージ？）</div>}
             {files?.map((f) => (
               <FileRow
                 key={f.path}
@@ -205,12 +205,12 @@ export function ComparePane({ gitRoot, onOpenRevDiff }: {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '6px 12px', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <select value={base} onChange={(e) => setBase(e.target.value)} style={sel} title="Base — the branch you're comparing against">
+          <select value={base} onChange={(e) => setBase(e.target.value)} style={sel} title="ベース — 比較元のブランチ">
             {branches.map((b) => <option key={b} value={b}>{b}</option>)}
           </select>
-          <button style={{ ...smallBtn, width: 22, justifyContent: 'center' }} title="Swap base ↔ compare"
+          <button style={{ ...smallBtn, width: 22, justifyContent: 'center' }} title="ベースと比較対象を入れ替える"
             onClick={() => { setBase(head); setHead(base); }}>⇄</button>
-          <select value={head} onChange={(e) => setHead(e.target.value)} style={sel} title="Compare — the branch whose changes you're viewing">
+          <select value={head} onChange={(e) => setHead(e.target.value)} style={sel} title="比較対象 — 変更を表示するブランチ">
             {branches.map((b) => <option key={b} value={b}>{b}</option>)}
           </select>
         </div>
@@ -229,13 +229,13 @@ export function ComparePane({ gitRoot, onOpenRevDiff }: {
           >{mode === 'three' ? 'since common ancestor' : 'literal difference'}</button>
           <span style={{ flex: 1 }} />
           <button style={smallBtn} onClick={() => void switchTo()} title={`Check out '${head}'`}>
-            <Icon name="arrow-right" /> switch to {head.split('/').pop()}
+            <Icon name="arrow-right" /> {head.split('/').pop()}へ切り替え
           </button>
         </div>
       </div>
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', borderTop: '1px solid var(--cth-ink-100)' }}>
         {note && <div style={noteStyle}>{note}</div>}
-        {result && result.files.length === 0 && !note && <div style={noteStyle}>no differences</div>}
+        {result && result.files.length === 0 && !note && <div style={noteStyle}>差分なし</div>}
         {result?.files.map((f) => (
           <FileRow
             key={f.path}

@@ -118,7 +118,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
     try {
       const res = await window.cth.skillsInstall(c.url, c.name);
       if (res.ok) {
-        setAction((a) => ({ ...a, [c.url]: { done: 'Installed' } }));
+        setAction((a) => ({ ...a, [c.url]: { done: 'インストールしました' } }));
         void loadLocal(); // the installed pane must reflect it immediately
       } else {
         setAction((a) => ({ ...a, [c.url]: { error: res.error } }));
@@ -134,7 +134,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
     try {
       const res = await window.cth.skillsUninstall(sk.path);
       if (res.ok) { setAction((a) => { const n = { ...a }; delete n[sk.path]; return n; }); void loadLocal(); }
-      else setAction((a) => ({ ...a, [sk.path]: { error: res.error ?? 'could not remove it' } }));
+      else setAction((a) => ({ ...a, [sk.path]: { error: res.error ?? '削除できませんでした' } }));
     } catch (e) {
       setAction((a) => ({ ...a, [sk.path]: { error: e instanceof Error ? e.message : 'uninstall failed' } }));
     }
@@ -169,15 +169,15 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
         padding: 10, borderBottom: '1px solid var(--cth-ink-300)'
       }}>
         <button onClick={() => setMode('installed')} style={tabBtn('installed', 'installed')}>
-          installed{local ? ` (${local.length})` : ''}
+          インストール済み{local ? `（${local.length}）` : ''}
         </button>
         <button onClick={() => setMode('browse')} style={tabBtn('browse', 'browse')}>
-          browse{catalog ? ` (${catalog.length})` : ''}
+          探す{catalog ? `（${catalog.length}）` : ''}
         </button>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={mode === 'installed' ? 'Search installed skills…' : 'Search the skills catalog…'}
+          placeholder={mode === 'installed' ? 'インストール済みスキルを検索…' : 'スキルカタログを検索…'}
           style={{
             flex: 1, minWidth: 140, padding: '4px 8px',
             background: 'var(--cth-paper-100)', color: 'var(--cth-ink-900)',
@@ -189,7 +189,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            title="Categories as published by the catalog"
+            title="カタログに掲載されたカテゴリー"
             style={{
               padding: '4px 6px', maxWidth: 210,
               background: 'var(--cth-paper-100)', color: 'var(--cth-ink-900)',
@@ -197,7 +197,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
               fontFamily: 'var(--cth-font-ui)', fontSize: 12
             }}
           >
-            <option value="all">all categories</option>
+            <option value="all">すべてのカテゴリー</option>
             {categories.map(([c, n]) => <option key={c} value={c}>{c} ({n})</option>)}
           </select>
         )}
@@ -212,7 +212,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
               fontFamily: 'var(--cth-font-ui)', fontSize: 12
             }}
           >
-            <option value="all">all publishers</option>
+            <option value="all">すべての公開元</option>
             {owners.map(([o, n]) => <option key={o} value={o}>{o} ({n})</option>)}
           </select>
         )}
@@ -227,12 +227,12 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
       {/* Body */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 10 }}>
         {mode === 'installed' ? (
-          local === null ? <Muted>Scanning…</Muted>
+          local === null ? <Muted>スキャン中…</Muted>
           : shownLocal.length === 0 ? (
             <Muted>
               {local.length === 0
-                ? 'No skills installed yet. Open Browse to see what is available.'
-                : 'Nothing matches that search.'}
+                ? 'インストール済みスキルはまだありません。「探す」で利用可能なスキルを確認できます。'
+                : '検索条件に一致するスキルはありません。'}
             </Muted>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -256,21 +256,21 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
                   }}>{s.path}</div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                     <button onClick={() => void window.cth.skillsReveal(s.path)} style={actionBtn('quiet')}>
-                      open folder
+                      フォルダーを開く
                     </button>
                     {s.scope === 'bundled' ? (
                       // Bundled skills ship inside the app and are re-copied into
                       // every agent on spawn, so "removing" one would silently come
                       // back. Say that instead of offering a button that lies.
                       <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>
-                        ships with the app
+                        アプリに同梱
                       </span>
                     ) : confirming === s.path ? (
                       <>
                         <button onClick={() => void uninstall(s)} style={actionBtn('danger')}>
-                          delete {s.name}?
+                          {s.name}を削除？
                         </button>
-                        <button onClick={() => setConfirming(null)} style={actionBtn('quiet')}>cancel</button>
+                        <button onClick={() => setConfirming(null)} style={actionBtn('quiet')}>キャンセル</button>
                       </>
                     ) : (
                       <button
@@ -287,7 +287,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
               ))}
             </div>
           )
-        ) : catalog === null ? <Muted>Loading the catalog…</Muted>
+        ) : catalog === null ? <Muted>カタログを読み込み中…</Muted>
         : (
           <>
             {catalogMeta?.error && (
@@ -295,12 +295,12 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
                 marginBottom: 8, padding: 8, fontSize: 12, color: 'var(--cth-ink-900)',
                 background: 'var(--cth-coral-light)', boxShadow: 'inset 0 0 0 1px var(--cth-coral)'
               }}>
-                Showing a cached copy — {catalogMeta.error}.
+                キャッシュ済みの一覧を表示中 — {catalogMeta.error}。
               </div>
             )}
             <div style={{ fontSize: 11, color: 'var(--cth-ink-500)', marginBottom: 8 }}>
-              {totalMatching} matching{totalMatching > shownCatalog.length ? ` · showing the first ${shownCatalog.length}` : ''}
-              {' · '}curated by abubakarsiddik31/claude-skills-collection
+              {totalMatching}件一致{totalMatching > shownCatalog.length ? ` · 先頭${shownCatalog.length}件を表示` : ''}
+              {' · '}abubakarsiddik31/claude-skills-collection提供
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {shownCatalog.map((s) => (
@@ -326,7 +326,7 @@ export function SkillsTab({ agentCwd }: { agentCwd?: string }) {
                     <button
                       onClick={() => void window.cth.openExternal(s.url)}
                       style={actionBtn('quiet')}
-                    >learn more</button>
+                    >詳しく見る</button>
                     {action[s.url]?.error && (
                       <span style={{ fontSize: 11, color: 'var(--cth-coral)', flex: 1, minWidth: 0 }}>
                         {action[s.url]?.error}

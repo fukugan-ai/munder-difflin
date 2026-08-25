@@ -305,7 +305,7 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
         <span style={{
           fontFamily: 'var(--cth-font-display)', fontSize: 12, lineHeight: '20px',
           color: 'var(--cth-ink-900)'
-        }}>MUNDER DIFFLIN · FOCUS MODE</span>
+        }}>MUNDER DIFFLIN · 集中モード</span>
         {/* Same top-right controls as the main title bar — fullscreen covers
             it, so theme / exit-fullscreen / IDE must live here too. */}
         <div className="cth-titlebar-nodrag" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -337,7 +337,7 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
               notifyThemeChangeAll(next === 'dark' ? 'dark' : 'light');
             }}
             title={appThemeNow === 'dark' ? 'Switch to the light theme' : 'Switch to the dark theme'}
-            aria-label="Toggle dark mode"
+            aria-label="ダークモードを切り替える"
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 28, height: 28, padding: 0,
@@ -356,8 +356,8 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
           <button
             className="cth-settings-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('cth:open-settings'))}
-            title="Settings"
-            aria-label="Settings"
+            title="設定"
+            aria-label="設定"
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 28, height: 28, padding: 0,
@@ -378,8 +378,8 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
           </button>
           <button
             onClick={() => setFullscreen(null)}
-            title="Exit focus mode (Esc)"
-            aria-label="Exit focus mode"
+            title="集中モードを終了（Esc）"
+            aria-label="集中モードを終了"
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 28, height: 28, padding: 0,
@@ -415,7 +415,7 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
           <div style={{ padding: 8, borderBottom: '1px solid var(--cth-ink-300)' }}>
             <button
               onClick={() => setAddAgentOpen(true)}
-              title="Add agent"
+              title="エージェントを追加"
               style={{
                 width: '100%', height: 32,
                 background: 'var(--cth-cream-100)',
@@ -504,7 +504,7 @@ export function FullscreenTerminal({ config }: FullscreenTerminalProps) {
                   background: 'var(--cth-status-working)',
                   boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)'
                 }}>
-                  <Icon name="play" /> restoring your team…
+                  <Icon name="play" /> チームを復元中…
                 </div>
               )}
               {!autoRestoring && restorableAgents.length > 0 && (
@@ -834,7 +834,7 @@ function SidebarRow({
               <span style={{
                 fontSize: scale.note, lineHeight: 1.35,
                 color: 'var(--cth-ink-300)', fontStyle: 'italic'
-              }}>no note</span>
+              }}>メモなし</span>
             )}
           </div>
         </div>
@@ -867,7 +867,7 @@ function SidebarRow({
             fontSize: noteLabelSize,
             lineHeight: `${Math.round(noteLabelSize * 1.5)}px`,
             color: 'var(--cth-ink-700)'
-          }}>PRIVATE NOTE</div>
+          }}>非公開メモ</div>
           {/* A textarea, not an input: the note is a bullet list, so Enter has
               to make a new line rather than doing nothing. autoFocus is safe
               now that opening is an explicit click, not a pointer fly-by. */}
@@ -882,7 +882,7 @@ function SidebarRow({
                 buttonRef.current?.focus();
               }
             }}
-            placeholder="one line per bullet…"
+            placeholder="1行につき1項目…"
             aria-label={`Note for ${agent.name}`}
             style={{
               width: '100%',
@@ -902,7 +902,7 @@ function SidebarRow({
           />
           <div style={{
             marginTop: 5, fontSize: 10, color: 'var(--cth-ink-500)'
-          }}>one line = one bullet · esc to close</div>
+          }}>1行＝1項目 · Escで閉じる</div>
         </div>
         </>,
         document.body
@@ -990,7 +990,7 @@ function Header({ agent, onEdit }: { agent: Agent; onEdit: () => void }) {
           <span
             className="cth-tip cth-tip-wrap"
             data-tip={`Open the IDE: browse and edit files in ${agent.name}'s workspace, and see their uncommitted changes as a diff.`}
-            aria-label="Open the IDE"
+            aria-label="IDEを開く"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
             <Icon name="code" /> IDE
@@ -1006,7 +1006,7 @@ function Header({ agent, onEdit }: { agent: Agent; onEdit: () => void }) {
           <span
             className="cth-tip cth-tip-wrap"
             data-tip={`Open your system terminal app in ${agent.worktreePath || agent.cwd} — a normal shell in this agent's folder, separate from the agent's own terminal.`}
-            aria-label="Open a system terminal in this agent's folder"
+            aria-label="このエージェントのフォルダーでシステムターミナルを開く"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
             <Icon name="terminal" />

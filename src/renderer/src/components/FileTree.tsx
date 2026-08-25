@@ -106,7 +106,7 @@ export function FileTree({ root, activeRel, onOpenFile, onCopyPath }: FileTreePr
       return (
         <div>
           {node.children?.map(c => renderNode(c, 0))}
-          {node.loading && <div style={{ padding: 8, fontSize: 12, color: 'var(--cth-ink-500)' }}>loading…</div>}
+          {node.loading && <div style={{ padding: 8, fontSize: 12, color: 'var(--cth-ink-500)' }}>読み込み中…</div>}
           {node.error && <div style={{ padding: 8, fontSize: 12, color: 'var(--cth-coral)' }}>{node.error}</div>}
         </div>
       );
@@ -144,7 +144,7 @@ export function FileTree({ root, activeRel, onOpenFile, onCopyPath }: FileTreePr
           }}>{node.name}</span>
           <button
             onClick={(e) => { e.stopPropagation(); onCopyPath(node.rel); }}
-            title="Copy path to clipboard"
+            title="パスをクリップボードへコピー"
             style={{
               padding: '0 4px',
               fontSize: 10,
@@ -152,13 +152,13 @@ export function FileTree({ root, activeRel, onOpenFile, onCopyPath }: FileTreePr
               color: 'var(--cth-ink-500)',
               background: 'transparent', border: 'none', cursor: 'pointer'
             }}
-          >copy</button>
+          >コピー</button>
         </div>
         {node.isDir && node.expanded && (
           <div>
             {node.loading && (
               <div style={{ padding: '2px 6px', paddingLeft: 24 + depth * 14, fontSize: 12, color: 'var(--cth-ink-500)' }}>
-                loading…
+                読み込み中…
               </div>
             )}
             {node.error && (

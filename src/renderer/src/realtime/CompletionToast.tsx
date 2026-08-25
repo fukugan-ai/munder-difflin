@@ -122,11 +122,11 @@ export function CompletionToast(): JSX.Element | null {
               textTransform: 'uppercase'
             }}
           >
-            <Icon name="bell" /> Michael · completed
+            <Icon name="bell" /> Michael · 完了
             <button
               type="button"
               onClick={() => dismiss(t.key)}
-              aria-label="Dismiss"
+              aria-label="閉じる"
               style={{
                 marginLeft: 'auto',
                 border: 'none',

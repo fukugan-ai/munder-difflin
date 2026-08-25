@@ -174,7 +174,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
           <span
             className="cth-tip cth-tip-wrap"
             data-tip={`Edit ${agent.name}: their name and face, which engine they run on, and the briefing that tells them what they are for.`}
-            aria-label="Edit this agent"
+            aria-label="このエージェントを編集"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
             <Icon name="edit" />{!compactHeader && ' edit'}
@@ -186,7 +186,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
           <span
             className="cth-tip cth-tip-wrap"
             data-tip={`Open the IDE: browse and edit files in ${agent.project}, and see uncommitted changes as a diff.`}
-            aria-label="Open the IDE"
+            aria-label="IDEを開く"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
             <Icon name="code" />{!compactHeader && ' IDE'}
@@ -199,7 +199,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
           <span
             className="cth-tip cth-tip-wrap"
             data-tip={`Open your system terminal app in ${agent.cwd} — a normal shell in this agent's folder, separate from the agent's own terminal.`}
-            aria-label="Open a system terminal in this agent's folder"
+            aria-label="このエージェントのフォルダーでシステムターミナルを開く"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
             <Icon name="terminal" />
@@ -239,8 +239,8 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
         {sidebarTab === 'terminal' && (
           isReal && agent.ptyId ? (
             isFullscreenedHere ? (
-              <EmptyTab title="In focus mode">
-                This terminal is open in focus mode. Press Esc or exit focus mode to bring it back here.
+              <EmptyTab title="集中モードで表示中">
+                このターミナルは集中モードで開いています。Escを押すか集中モードを終了すると、ここに戻ります。
               </EmptyTab>
             ) : (
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -265,8 +265,8 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
             </div>
             )
           ) : (
-            <EmptyTab title="No PTY">
-              This agent has no live terminal. Spawn an agent through "add agent" to use the terminal tab.
+            <EmptyTab title="ターミナルなし">
+              このエージェントには実行中のターミナルがありません。「エージェントを追加」から起動してください。
             </EmptyTab>
           )
         )}

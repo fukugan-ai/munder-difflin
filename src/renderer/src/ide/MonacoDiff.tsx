@@ -21,7 +21,7 @@ export function MonacoDiff({ path, original, modified }: MonacoDiffProps) {
       language={languageForPath(path)}
       original={original}
       modified={modified}
-      loading={<div style={{ padding: 12, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-ui)' }}>loading diff…</div>}
+      loading={<div style={{ padding: 12, color: 'var(--cth-ink-500)', fontFamily: 'var(--cth-font-ui)' }}>差分を読み込み中…</div>}
       options={{
         readOnly: true,
         renderSideBySide: true,

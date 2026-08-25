@@ -74,7 +74,7 @@ export function UpdatesSection() {
         fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
         color: 'var(--cth-ink-500)', textTransform: 'uppercase', marginBottom: 10
       }}>
-        Updates
+        アップデート
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -97,9 +97,9 @@ export function UpdatesSection() {
               size="sm"
               onClick={downloadManually}
               style={{ whiteSpace: 'nowrap' }}
-              title={`Download the v${pending} installer and replace the app yourself`}
+              title={`v${pending}のインストーラーをダウンロードして手動で置き換える`}
             >
-              download manually
+              手動でダウンロード
             </PixelButton>
           )}
           {view.button && (
@@ -128,8 +128,9 @@ export function UpdatesSection() {
           color: 'var(--cth-ink-900)', background: 'var(--cth-paper-100)',
           border: '2px solid var(--cth-ink-900)'
         }}>
-          <b>v{manualStarted} is downloading in your browser.</b> When it lands, quit this app, install
-          the new version over the current one, open it and pick the same project. On {steps.os}:
+          <b>v{manualStarted}をブラウザーでダウンロードしています。</b> ダウンロード後にこのアプリを終了し、
+          現在のアプリへ上書きインストールしてください。新しいアプリを開き、同じプロジェクトを選択します。
+          {steps.os}での手順：
           <ol style={{ margin: '4px 0 0', paddingLeft: 18, color: 'var(--cth-ink-700)' }}>
             {steps.steps.map((t) => <li key={t}>{t}</li>)}
           </ol>

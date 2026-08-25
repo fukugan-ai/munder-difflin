@@ -45,34 +45,34 @@ export function OrgSection({ onSummary }: { onSummary?: (s: string) => void }) {
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ flex: 1, fontSize: 12, color: 'var(--cth-ink-700)' }}>
-          Accept messages from your organisation
+          組織からのメッセージを受け取る
         </span>
         <Toggle on={cfg.enabled} onClick={() => apply({ ...cfg, enabled: !cfg.enabled })} />
       </div>
 
-      <Field label="ORGANISATION KEY">
+      <Field label="組織キー">
         <SecretField
           value={cfg.apiKey}
           revealed={revealed}
           onReveal={() => setRevealed((r) => !r)}
-          placeholder="paste your key"
+          placeholder="キーを貼り付け"
           onChange={(apiKey) => apply({ ...cfg, apiKey }, false)}
           onBlur={() => apply(cfg)}
         />
         <Hint>{CLONE_NODE_BLURB}</Hint>
       </Field>
 
-      <Field label="TRUST">
+      <Field label="信頼レベル">
         <ModePicker value={cfg.mode} onChange={(mode: TriggerMode) => apply({ ...cfg, mode })} />
       </Field>
 
       <Callout tone="note">
-        Settings only, for now. The org messaging service does not exist yet, so a key here starts no
-        connection and nothing is sent or received. It is stored ready for when it does.
+        現在は設定のみです。組織メッセージサービスは未提供のため、キーを設定しても接続や送受信は始まりません。
+        将来の提供に備えて保存されます。
       </Callout>
 
       {cfg.enabled && !hasKey && (
-        <Callout>This is switched on with no key set, so no teammate can reach you yet.</Callout>
+        <Callout>オンになっていますがキーが未設定のため、まだチームメンバーから接続できません。</Callout>
       )}
     </>
   );

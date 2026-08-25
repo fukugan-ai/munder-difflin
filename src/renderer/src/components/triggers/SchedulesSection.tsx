@@ -104,7 +104,7 @@ export function SchedulesSection({ onSummary }: { onSummary?: (s: string) => voi
 
   return (
     <>
-      {missions.length === 0 && <Muted>Nothing is scheduled yet.</Muted>}
+      {missions.length === 0 && <Muted>スケジュールはまだありません。</Muted>}
       {missions.map((m) => (
         <MissionRow
           key={m.id}
@@ -118,28 +118,28 @@ export function SchedulesSection({ onSummary }: { onSummary?: (s: string) => voi
 
       {!adding && (
         <div style={{ marginTop: 8 }}>
-          <PixelButton variant="secondary" size="sm" onClick={() => setAdding(true)}>add a schedule</PixelButton>
+          <PixelButton variant="secondary" size="sm" onClick={() => setAdding(true)}>スケジュールを追加</PixelButton>
         </div>
       )}
       {adding && (
         <SubCard>
-          <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)' }}>NEW SCHEDULE</div>
-          <Field label="LABEL">
+          <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)' }}>新しいスケジュール</div>
+          <Field label="表示名">
             <input
               value={mLabel}
               onChange={(e) => setMLabel(e.target.value)}
-              placeholder="What this run is for"
+              placeholder="この実行の目的"
               style={inputStyle}
             />
           </Field>
-          <Field label="GOES TO">
+          <Field label="送信先">
             <Select value={mTo} onChange={setMTo} style={{ width: '100%' }}>
-              <option value="broadcast">everyone</option>
+              <option value="broadcast">全員</option>
               <option value="god">Michael</option>
               {agents.filter((a) => !a.isGod).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </Select>
           </Field>
-          <Field label="WHEN">
+          <Field label="実行時刻">
             <SchedulePicker
               intervalMs={mInterval}
               weekly={mWeekly}
@@ -147,21 +147,21 @@ export function SchedulesSection({ onSummary }: { onSummary?: (s: string) => voi
               onWeekly={setMWeekly}
             />
           </Field>
-          <Field label="PROMPT">
+          <Field label="プロンプト">
             <textarea
               value={mBody}
               onChange={(e) => setMBody(e.target.value)}
               rows={3}
-              placeholder="Sent word for word on every run."
+              placeholder="毎回そのまま送信する内容"
               style={textareaStyle}
             />
           </Field>
           <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
             <PixelButton variant="primary" size="sm" onClick={add} disabled={!mLabel.trim() || !mBody.trim() || !whenIsUsable}>
-              add
+              追加
             </PixelButton>
             <PixelButton variant="ghost" size="sm" onClick={() => { setAdding(false); setMLabel(''); setMBody(''); setMWeekly(null); }}>
-              cancel
+              キャンセル
             </PixelButton>
           </div>
         </SubCard>
@@ -262,44 +262,44 @@ function MissionRow({ mission, targetName, agents, onPatch, onDelete }: {
           background: 'var(--cth-paper-100)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)',
           fontFamily: 'var(--cth-font-mono)', fontSize: 11, lineHeight: '15px',
           color: 'var(--cth-ink-700)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-        }}>{mission.body.trim() || 'No prompt set.'}</div>
+        }}>{mission.body.trim() || 'プロンプト未設定'}</div>
       )}
 
       {open && (
         <div style={{ marginTop: 4 }}>
-          <Field label="LABEL">
+          <Field label="表示名">
             <input value={label} onChange={(e) => setLabel(e.target.value)} style={inputStyle} />
           </Field>
-          <Field label="GOES TO">
+          <Field label="送信先">
             <Select value={to} onChange={setTo} style={{ width: '100%' }}>
-              <option value="broadcast">everyone</option>
+              <option value="broadcast">全員</option>
               <option value="god">Michael</option>
               {agents.filter((a) => !a.isGod).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </Select>
           </Field>
-          <Field label="WHEN">
+          <Field label="実行時刻">
             {/* The heartbeat has no calendar: it is a cadence that adapts to how
                 busy the floor is, so pinning it to Tuesdays would be a lie. */}
             {heartbeat
               ? <SchedulePicker intervalMs={intervalMs} weekly={null} onInterval={setIntervalMs} onWeekly={() => { /* interval only */ }} />
               : <SchedulePicker intervalMs={intervalMs} weekly={weekly} onInterval={setIntervalMs} onWeekly={setWeekly} />}
-            {heartbeat && <Hint>The beat adapts to how quiet the floor is, so this is the ceiling, not the exact gap.</Hint>}
+            {heartbeat && <Hint>チームの稼働状況に応じて間隔が調整されるため、これは正確な間隔ではなく上限です。</Hint>}
           </Field>
-          <Field label="PROMPT">
+          <Field label="プロンプト">
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={4}
-              placeholder="Sent word for word on every run."
+              placeholder="毎回そのまま送信する内容"
               style={textareaStyle}
             />
           </Field>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
             <PixelButton variant="primary" size="sm" onClick={save} disabled={!dirty || !label.trim() || !whenIsUsable}>
-              {saved && !dirty ? 'saved' : 'save'}
+              {saved && !dirty ? '保存済み' : '保存'}
             </PixelButton>
             <span style={{ flex: 1 }} />
-            <MiniButton tone="danger" onClick={onDelete}>delete</MiniButton>
+            <MiniButton tone="danger" onClick={onDelete}>削除</MiniButton>
           </div>
         </div>
       )}

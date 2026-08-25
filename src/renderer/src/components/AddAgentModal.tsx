@@ -49,28 +49,28 @@ const ossLink: CSSProperties = { color: 'var(--cth-ink-900)', textDecoration: 'u
 // role so a user isn't staring at a blank field (item 7).
 const DESCRIPTION_TEMPLATES: { label: string; description: string; goal: string }[] = [
   {
-    label: 'Repo janitor',
-    description: 'keeps the codebase tidy and healthy',
+    label: 'リポジトリ整備',
+    description: 'コードベースを整理し健全に保つ',
     goal: 'Continuously hunt for dead code, lint errors, flaky tests, and small safe refactors. Fix the safe ones and leave a note for anything risky. Never change behavior without flagging it.'
   },
   {
-    label: 'Docs writer',
-    description: 'keeps docs in sync with the code',
+    label: 'ドキュメント担当',
+    description: 'ドキュメントをコードと同期する',
     goal: 'Watch for code changes that outdate the README and docs, then update them. Write for newcomers and prefer concrete examples over prose.'
   },
   {
-    label: 'Bug triager',
-    description: 'investigates and root-causes bugs',
+    label: 'バグ調査担当',
+    description: 'バグを調査して根本原因を特定する',
     goal: 'For each reported issue: reproduce it, find the root cause, then propose a minimal fix with evidence. No fixes without a confirmed root cause.'
   },
   {
-    label: 'Research assistant',
-    description: 'gathers and summarizes information',
+    label: 'リサーチ担当',
+    description: '情報を収集して要約する',
     goal: 'Research the questions you are given across multiple sources, verify the key claims, and return a concise, cited summary.'
   },
   {
-    label: 'Release manager',
-    description: 'prepares and ships releases',
+    label: 'リリース担当',
+    description: 'リリースを準備して公開する',
     goal: 'Track what has shipped since the last release, update the changelog and version, and draft clear release notes.'
   }
 ];
@@ -116,10 +116,10 @@ Repos, tools, style, or constraints to respect:
 // isn't a field here — it rides an imported hire manifest (the pinned banner).
 type SectionKey = 'identity' | 'workspace' | 'engine' | 'briefing';
 const SECTIONS: { key: SectionKey; label: string; hint: string }[] = [
-  { key: 'identity',  label: 'Identity',  hint: 'name · character · color' },
-  { key: 'workspace', label: 'Workspace', hint: 'folder · isolation · resume' },
-  { key: 'engine',    label: 'Engine',    hint: 'provider · model · command' },
-  { key: 'briefing',  label: 'Briefing',  hint: 'role · goal' }
+  { key: 'identity',  label: '基本情報', hint: '名前 · キャラクター · 色' },
+  { key: 'workspace', label: '作業場所', hint: 'フォルダー · 分離 · 再開' },
+  { key: 'engine',    label: 'エンジン', hint: 'プロバイダー · モデル · コマンド' },
+  { key: 'briefing',  label: '役割設定', hint: '役割 · 目標' }
 ];
 
 function basename(path: string): string {
@@ -386,9 +386,9 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
     setError(undefined);
     // A required field can live in a section the user hasn't opened, so jump to
     // the offending section as we surface the error — the field is never hidden.
-    if (!name.trim()) { setError('Name is required'); setSection('identity'); return; }
-    if (!cwd) { setError('Pick a folder first'); setSection('workspace'); return; }
-    if (!command.trim()) { setError('Command is required'); setSection('engine'); return; }
+    if (!name.trim()) { setError('名前を入力してください'); setSection('identity'); return; }
+    if (!cwd) { setError('先にフォルダーを選んでください'); setSection('workspace'); return; }
+    if (!command.trim()) { setError('コマンドを入力してください'); setSection('engine'); return; }
 
     setBusy(true);
     const id = uniqueId(name);
@@ -424,7 +424,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
     });
     if (!spawnRes.ok) {
       setBusy(false);
-      setError(spawnRes.error ?? 'spawn failed');
+      setError(spawnRes.error ?? '起動に失敗しました');
       return;
     }
     // #2 — the requested resume session id wasn't found anywhere; main fell back
@@ -455,7 +455,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
       cwd: spawnedCwd,
       goal: goal.trim() || undefined,
       status: 'idle',
-      action: resuming && spawnRes.resumeNotFound ? 'session not found — fresh start' : 'starting up',
+      action: resuming && spawnRes.resumeNotFound ? 'セッションが見つからないため新規開始' : '起動中',
       progress: 0,
       currentStation: 'desk',
       ptyId,
@@ -513,7 +513,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
       <div onClick={(e) => e.stopPropagation()} style={{ width: 940, maxWidth: '95vw' }}>
         <PixelPanel
           variant="dialog"
-          title="ADD AGENT"
+          title="エージェントを追加"
           style={{ padding: 16 }}
           noPadding
         >
@@ -534,14 +534,14 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                 display: 'flex', flexDirection: 'column', gap: 2
               }}>
                 <span>
-                  📋 hire imported: <strong>{hireMeta.name}</strong>
-                  {hireMeta.author ? <> · by {hireMeta.author}</> : null}
-                  {reviewProgress ? <> · hire {reviewProgress.current} of {reviewProgress.total}</> : null}
+                  📋 エージェント設定をインポート：<strong>{hireMeta.name}</strong>
+                  {hireMeta.author ? <> · 作成者 {hireMeta.author}</> : null}
+                  {reviewProgress ? <> · {reviewProgress.total}件中{reviewProgress.current}件目</> : null}
                 </span>
-                <span>review every field — especially the command — before spawning.</span>
+                <span>起動する前に、特にコマンドを含むすべての項目を確認してください。</span>
                 {hireMeta.commandFlags && hireMeta.commandFlags.length > 0 && (
                   <span style={{ display: 'flex', gap: 4, alignItems: 'baseline', flexWrap: 'wrap', marginTop: 2 }}>
-                    <span style={{ fontSize: 12 }}>⚠️ flags this hire appends to the command:</span>
+                    <span style={{ fontSize: 12 }}>⚠️ コマンドに追加されるフラグ：</span>
                     {hireMeta.commandFlags.map((f, i) => (
                       <code
                         key={`${f}-${i}`}
@@ -561,7 +561,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                 )}
                 {hireMeta.skills && hireMeta.skills.length > 0 && (
                   <span style={{ display: 'flex', gap: 4, alignItems: 'baseline', flexWrap: 'wrap', marginTop: 2 }}>
-                    <span style={{ fontSize: 12 }}>skills this hire activates:</span>
+                    <span style={{ fontSize: 12 }}>このエージェントが有効にするスキル：</span>
                     {hireMeta.skills.map((s) => (
                       <code
                         key={s}
@@ -590,7 +590,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
                       {safe.length > 0 && (
                         <span style={{ display: 'flex', gap: 4, alignItems: 'baseline', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 12 }}>MCP servers (safe, pre-enabled):</span>
+                          <span style={{ fontSize: 12 }}>MCPサーバー（安全・有効化済み）：</span>
                           {safe.map((id) => (
                             <code key={id} style={{
                               fontFamily: 'var(--cth-font-mono)', fontSize: 12, padding: '0 4px',
@@ -603,7 +603,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                       )}
                       {consent.length > 0 && (
                         <span style={{ display: 'flex', gap: 4, alignItems: 'baseline', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 12 }}>⚠️ MCP (needs your consent — NOT auto-enabled):</span>
+                          <span style={{ fontSize: 12 }}>⚠️ MCP（確認が必要・自動では有効になりません）：</span>
                           {consent.map((id) => (
                             <code key={id} style={{
                               fontFamily: 'var(--cth-font-mono)', fontSize: 12, padding: '0 4px',
@@ -613,7 +613,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                             }}>{id}</code>
                           ))}
                           <span style={{ fontSize: 11, color: 'var(--cth-ink-700)' }}>
-                            — enable in Settings → MCP after reviewing
+                            — 内容を確認後、「設定」→「MCP」で有効にしてください
                           </span>
                         </span>
                       )}
@@ -663,7 +663,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
               <div style={{ flex: 1, minWidth: 0, minHeight: 260, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {section === 'identity' && (
                   <>
-                    <Row label="Name">
+                    <Row label="名前">
                       <input
                         value={name}
                         onChange={(e) => {
@@ -677,7 +677,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                       />
                     </Row>
 
-                    <Row label="Character">
+                    <Row label="キャラクター">
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {OFFICE_CAST.map(c => (
                           <button
@@ -704,7 +704,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                       </div>
                     </Row>
 
-                    <Row label="Color">
+                    <Row label="色">
                       <div style={{ display: 'flex', gap: 6 }}>
                         {ACCENTS.map(a => (
                           <button
@@ -729,14 +729,14 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
 
                 {section === 'workspace' && (
                   <>
-                    <Row label="Project">
+                    <Row label="プロジェクト">
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                         <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>
-                          {repos.length > 0 ? 'Pick a project, or add a new one:' : 'No projects yet — add one to get started:'}
+                          {repos.length > 0 ? 'プロジェクトを選ぶか、新しく追加してください：' : 'プロジェクトはまだありません。追加して始めましょう：'}
                         </span>
                         <button
                           onClick={addProject}
-                          title="Pick a folder and register it as a project"
+                          title="フォルダーを選び、プロジェクトとして登録"
                           style={{
                             flexShrink: 0, padding: '2px 8px 1px', border: 'none', cursor: 'pointer',
                             background: 'var(--cth-cream-200)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)',
@@ -744,7 +744,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                             display: 'inline-flex', alignItems: 'center', gap: 4
                           }}
                         >
-                          <Icon name="plus" /> add project
+                          <Icon name="plus" /> プロジェクトを追加
                         </button>
                       </div>
                       {repos.length > 0 && (
@@ -781,8 +781,8 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                               </button>
                               <button
                                 onClick={() => unregisterProject(r)}
-                                title={`Remove ${basename(r)} from this list. The folder itself is left alone.`}
-                                aria-label={`Remove ${basename(r)} from the project list`}
+                                title={`${basename(r)}を一覧から削除します。フォルダー自体は削除されません。`}
+                                aria-label={`${basename(r)}をプロジェクト一覧から削除`}
                                 style={{
                                   padding: '3px 6px 1px 2px',
                                   background: 'transparent',
@@ -804,19 +804,19 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                         <input
                           value={cwd}
                           onChange={(e) => setCwd(e.target.value)}
-                          placeholder="/path/to/your/project"
+                          placeholder="/プロジェクト/への/パス"
                           style={{ ...inputStyle, flex: 1, fontFamily: 'var(--cth-font-mono)', fontSize: 13 }}
                         />
                         <PixelButton variant="secondary" size="md" onClick={pickFolder}>
                           <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-                            <Icon name="folder" /> pick
+                            <Icon name="folder" /> 選択
                           </span>
                         </PixelButton>
                       </div>
                       {cwd.trim() && !repos.includes(cwd.trim()) && (
                         <button
                           onClick={() => registerProject(cwd)}
-                          title="Save this folder to your projects so it's a one-click pick next time"
+                          title="このフォルダーをプロジェクトへ保存し、次回からワンクリックで選択"
                           style={{
                             alignSelf: 'flex-start', marginTop: 2,
                             padding: '2px 8px 1px', border: 'none', cursor: 'pointer',
@@ -825,7 +825,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                             display: 'inline-flex', alignItems: 'center', gap: 4
                           }}
                         >
-                          <Icon name="plus" /> save as project
+                          <Icon name="plus" /> プロジェクトとして保存
                         </button>
                       )}
                     </Row>
@@ -839,16 +839,16 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                         style={{ width: 16, height: 16, cursor: resuming ? 'not-allowed' : 'pointer' }}
                       />
                       <span style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 13, color: 'var(--cth-ink-900)' }}>
-                        Git isolation (own worktree)
+                        Gitで分離（専用worktree）
                       </span>
                     </label>
 
-                    <Row label="Resume session ID (optional)">
+                    <Row label="再開するセッションID（任意）">
                       <input
                         value={resumeSessionId}
                         onChange={(e) => { setResumeSessionId(e.target.value); setFolderNote(undefined); }}
                         onBlur={resolveFolderFromSession}
-                        placeholder="paste a Claude session id to continue its conversation"
+                        placeholder="会話を続けるClaudeセッションIDを貼り付け"
                         style={{ ...inputStyle, fontFamily: 'var(--cth-font-mono)', fontSize: 13 }}
                       />
                       {folderNote && (
@@ -858,7 +858,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                       )}
                       {resuming && (
                         <span style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-700)' }}>
-                          Will resume this session in the chosen folder (git isolation disabled).
+                          選択したフォルダーでこのセッションを再開します（Git分離は無効です）。
                         </span>
                       )}
                     </Row>
@@ -867,7 +867,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
 
                 {section === 'engine' && (
                   <>
-                    <Row label="Provider">
+                    <Row label="プロバイダー">
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {AGENT_PROVIDER_PRESETS.map((p) => {
                           const active = provider === p.id;
@@ -903,7 +903,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                       </div>
                     </Row>
 
-                    {preset.supportsModel && <Row label="Model">
+                    {preset.supportsModel && <Row label="モデル">
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {(() => {
                           // An imported hire may name a model newer than this picker's
@@ -944,10 +944,10 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                         `ollama/<tag>`; provider slugs are identical across engines)
                         and rebuilds the command. */}
                     {hasOssQuickPicks(provider) && (
-                      <Row label="OSS models">
+                      <Row label="OSSモデル">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           <div>
-                            <div style={ossGroupHead}>Local · no key (Ollama / LM Studio)</div>
+                            <div style={ossGroupHead}>ローカル · キー不要（Ollama / LM Studio）</div>
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                               {OSS_LOCAL_PICKS.map((p) => {
                                 const slug = localSlugFor(provider, p.tag);
@@ -966,7 +966,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                             </div>
                           </div>
                           <div>
-                            <div style={ossGroupHead}>Via OSS provider · BYOK</div>
+                            <div style={ossGroupHead}>OSSプロバイダー経由 · BYOK</div>
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                               {OSS_PROVIDER_PICKS.map((p) => {
                                 const active = (model ?? '') === p.slug;
@@ -989,24 +989,24 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
 
                     {(provider === 'opencode' || provider === 'crush' || provider === 'pi' || provider === 'qwen') && (
                       <div style={{ fontSize: 12, color: 'var(--cth-ink-500)', lineHeight: '16px', margin: '2px 0 6px' }}>
-                        BYOK keys &amp; local endpoints for this engine live in <strong>Settings → AI Engines</strong>.
-                        {' '}New to local models? Read{' '}
+                        このエンジンのBYOKキーとローカルエンドポイントは<strong>設定 → AIエンジン</strong>にあります。
+                        {' '}ローカルモデルが初めてなら、{' '}
                         <a
                           href={OSS_BLOG_LINKS.openModels}
                           onClick={(e) => { e.preventDefault(); void window.cth.openExternal(OSS_BLOG_LINKS.openModels); }}
                           style={ossLink}
-                        >run on open models</a>
-                        {' '}or{' '}
+                        >オープンモデルで動かす</a>
+                        {' '}または{' '}
                         <a
                           href={OSS_BLOG_LINKS.macMini}
                           onClick={(e) => { e.preventDefault(); void window.cth.openExternal(OSS_BLOG_LINKS.macMini); }}
                           style={ossLink}
-                        >set up on a Mac Mini</a>.
-                        {' '}Live end-to-end is pending real model calls (verify on-device).
+                        >Mac Miniへ設定する</a>をご覧ください。
+                        {' '}実モデルでの動作は端末上で確認してください。
                       </div>
                     )}
 
-                    <Row label={config.autoMode && preset.autoFlag ? 'Command (auto mode on)' : 'Command'}>
+                    <Row label={config.autoMode && preset.autoFlag ? 'コマンド（自動モード：オン）' : 'コマンド'}>
                       <input
                         value={command}
                         onChange={(e) => setCommand(e.target.value)}
@@ -1027,7 +1027,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
 
                 {section === 'briefing' && (
                   <>
-                    <Row label="Templates">
+                    <Row label="テンプレート">
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {DESCRIPTION_TEMPLATES.map((t) => (
                           <button
@@ -1048,20 +1048,20 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                       </div>
                     </Row>
 
-                    <Row label="Role">
+                    <Row label="役割">
                       <input
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        placeholder="job — what this agent is for, not live status"
+                        placeholder="役割 — 現在の状態ではなく、このエージェントの用途"
                         style={inputStyle}
                       />
                     </Row>
 
-                    <Row label="Goal (optional)">
+                    <Row label="目標（任意）">
                       <textarea
                         value={goal}
                         onChange={(e) => setGoal(e.target.value)}
-                        placeholder="long-running directive injected on every prompt"
+                        placeholder="すべてのプロンプトへ追加する継続的な指示"
                         rows={2}
                         style={{ ...inputStyle, fontFamily: 'var(--cth-font-ui)', resize: 'none' }}
                       />
@@ -1092,8 +1092,8 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
             }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 12, color: 'var(--cth-ink-700)', lineHeight: '17px' }}>
-                  <strong>Import hire</strong> loads a ready-made agent from a <code style={{ fontFamily: 'var(--cth-font-mono)' }}>.json</code> manifest —
-                  it fills in every field below for you to review. Nothing spawns until you hit <em>spawn</em>.
+                  <strong>エージェントをインポート</strong>すると、<code style={{ fontFamily: 'var(--cth-font-mono)' }}>.json</code>マニフェストから設定済みエージェントを読み込みます。
+                  確認用に各項目へ入力され、「起動」を押すまで実行されません。
                 </span>
                 <button
                   onClick={() => setShowHirePrompt((v) => !v)}
@@ -1105,14 +1105,14 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                     fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-900)'
                   }}
                 >
-                  {showHirePrompt ? 'hide AI prompt' : 'generate one with AI…'}
+                  {showHirePrompt ? 'AI用プロンプトを隠す' : 'AIで作成…'}
                 </button>
               </div>
               {showHirePrompt && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <span style={{ fontSize: 12, color: 'var(--cth-ink-500)', lineHeight: '16px' }}>
-                    Copy this into Claude/ChatGPT/Gemini, fill in the details at the bottom, then save
-                    its JSON reply as a <code style={{ fontFamily: 'var(--cth-font-mono)' }}>.json</code> file and import it here.
+                    これをClaude、ChatGPT、Geminiへ貼り付け、末尾の詳細を入力してください。返されたJSONを
+                    <code style={{ fontFamily: 'var(--cth-font-mono)' }}>.json</code>ファイルとして保存し、ここへインポートします。
                   </span>
                   <textarea
                     readOnly
@@ -1128,7 +1128,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                   />
                   <div>
                     <PixelButton variant="secondary" size="sm" onClick={copyHirePrompt}>
-                      {copiedPrompt ? 'copied ✓' : 'copy prompt'}
+                      {copiedPrompt ? 'コピー済み ✓' : 'プロンプトをコピー'}
                     </PixelButton>
                   </div>
                 </div>
@@ -1141,17 +1141,17 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                 size="md"
                 onClick={importHire}
                 disabled={busy}
-                title="Import one or more hire manifests (.json)"
+                title="1つ以上のエージェントマニフェスト（.json）をインポート"
               >
-                import hires…
+                エージェントをインポート…
               </PixelButton>
               <div style={{ flex: 1 }} />
               {pendingHire && (
-                <PixelButton variant="secondary" size="md" onClick={skipHire} disabled={busy}>skip hire</PixelButton>
+                <PixelButton variant="secondary" size="md" onClick={skipHire} disabled={busy}>インポートをスキップ</PixelButton>
               )}
-              <PixelButton variant="ghost" size="md" onClick={onClose} disabled={busy}>cancel</PixelButton>
+              <PixelButton variant="ghost" size="md" onClick={onClose} disabled={busy}>キャンセル</PixelButton>
               <PixelButton variant="primary" size="md" onClick={submit} disabled={busy}>
-                {busy ? 'spawning...' : 'spawn'}
+                {busy ? '起動中…' : '起動'}
               </PixelButton>
             </div>
           </div>

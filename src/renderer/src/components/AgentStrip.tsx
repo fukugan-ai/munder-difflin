@@ -246,8 +246,8 @@ export function AgentStrip({ config }: AgentStripProps) {
           ref={restoreBtnRef}
           style={{ alignSelf: 'center', flexShrink: 0, marginLeft: 'auto' }}
           title={restoreBusy
-            ? "Your previous session's agents are being respawned with their original ids, so memory and inboxes reattach."
-            : `Previous session: ${restorableAgents.map((a: Agent) => a.name).join(', ')}`}
+            ? '前回のエージェントを元のIDで再起動し、記憶と受信箱を再接続しています。'
+            : `前回のセッション：${restorableAgents.map((a: Agent) => a.name).join('、')}`}
         >
           <PixelButton
             variant="primary"
@@ -281,7 +281,7 @@ export function AgentStrip({ config }: AgentStripProps) {
               fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
               color: 'var(--cth-ink-500)', textTransform: 'uppercase'
             }}>
-              previous session
+              前回のセッション
             </span>
             {/* Per-agent dismiss wires straight to removeRestorableAgent
                 (filters + persistRestorable), so a dismissed agent never
@@ -323,7 +323,7 @@ export function AgentStrip({ config }: AgentStripProps) {
               onClick={() => { setRestoreMenuOpen(false); void restoreTeam(); }}
             >
               <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', whiteSpace: 'nowrap' }}>
-                <Icon name="play" /> restore all ({restorableAgents.length})
+                <Icon name="play" /> すべて復元（{restorableAgents.length}）
               </span>
             </PixelButton>
           </div>

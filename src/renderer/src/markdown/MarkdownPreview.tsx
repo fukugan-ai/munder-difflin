@@ -97,7 +97,7 @@ function MdImage({ root, rel, alt, src }: { root: string; rel: string; alt?: str
   const [decodeFailed, setDecodeFailed] = useState(false);
   if (img.status === 'loading') return <ImageChip alt={alt} src={src} note="loading" />;
   if (img.status === 'error') return <ImageChip alt={alt} src={src} note={img.error} />;
-  if (decodeFailed) return <ImageChip alt={alt} src={src} note="could not decode" />;
+  if (decodeFailed) return <ImageChip alt={alt} src={src} note="デコードできませんでした" />;
   return (
     <img
       className="cth-md-image"

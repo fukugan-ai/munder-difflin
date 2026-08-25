@@ -231,14 +231,14 @@ export function UpdateToast() {
         <Icon name="sparkle" />
         <span style={{ fontSize: 13, color: 'var(--cth-ink-900)', fontWeight: 600 }}>
           {status.state === 'downloaded'
-            ? `Update v${status.version} downloaded`
-            : `v${status.version} is available`}
+            ? `アップデートv${status.version}をダウンロードしました`
+            : `v${status.version}を利用できます`}
         </span>
       </div>
       <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-700)' }}>
         {status.state === 'downloaded'
-          ? 'Restart Munder Difflin whenever you like to apply it — nothing restarts on its own.'
-          : 'This install can’t update itself — grab the new build from the releases page.'}
+          ? '都合のよいときにMunder Difflinを再起動して適用してください。自動では再起動しません。'
+          : 'この環境では自動更新できません。リリースページから新版を取得してください。'}
       </span>
 
       {notes.length > 0 && (
@@ -247,7 +247,7 @@ export function UpdateToast() {
             fontFamily: 'var(--cth-font-display)', fontSize: 8, lineHeight: '12px',
             color: 'var(--cth-ink-500)', textTransform: 'uppercase'
           }}>
-            What’s new
+            新機能
           </div>
           {/* The digest is already capped at ~280 chars; the clamp is the second
               belt, for the day a release body defeats the parser. */}
@@ -271,13 +271,13 @@ export function UpdateToast() {
               href={status.state === 'available-manual' ? status.url : GITHUB_RELEASES_URL}
               onClick={(e) => { e.preventDefault(); openRelease(); }}
               style={linkStyle}
-            >Read more</a>
+            >詳しく見る</a>
             {showStar && (
               <a
                 href={GITHUB_REPO_URL}
                 onClick={(e) => { e.preventDefault(); void window.cth.openExternal(GITHUB_REPO_URL); }}
                 style={linkStyle}
-              >⭐ Star us on GitHub</a>
+              >⭐ GitHubでスター</a>
             )}
           </div>
         </div>
@@ -288,7 +288,7 @@ export function UpdateToast() {
           onClick={() => setStatus(null)}
           style={{ ...buttonStyle, background: 'var(--cth-cream-100)' }}
         >
-          later
+            後で
         </button>
         {status.state === 'downloaded' ? (
           <button onClick={restart} disabled={busy} style={buttonStyle}>

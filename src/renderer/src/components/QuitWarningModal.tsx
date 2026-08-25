@@ -54,7 +54,7 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
         onClick={(e) => e.stopPropagation()}
         style={{ width: 480, maxWidth: '92vw' }}
       >
-        <PixelPanel variant="dialog" title={inClosingTime ? 'CLOSING TIME' : 'QUITTING NOW?'} noPadding>
+        <PixelPanel variant="dialog" title={inClosingTime ? '終了処理' : '今すぐ終了しますか？'} noPadding>
           <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {inClosingTime ? (
               <>
@@ -77,19 +77,18 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                       marginBottom: 4
                     }}>
                       {closing!.phase === 'complete'
-                        ? 'FLOOR SAVED — SEE YOU TOMORROW'
+                        ? 'チームを保存しました — また明日'
                         : closing!.phase === 'timeout'
-                          ? 'STILL WRAPPING UP…'
-                          : 'WRAPPING UP THE FLOOR'}
+                          ? 'まだ終了処理中です…'
+                          : 'チームの終了処理中'}
                     </div>
                     <div style={{ fontSize: 15, lineHeight: '22px', color: 'var(--cth-ink-700)' }}>
                       {closing!.phase === 'complete' ? (
-                        <>Every agent saved its memory and the orchestrator confirmed the
-                        shutdown. The harness closes itself in a moment.</>
+                        <>すべてのエージェントが記憶を保存し、オーケストレーターが終了を確認しました。
+                        まもなくアプリが閉じます。</>
                       ) : (
-                        <>The orchestrator broadcast closing time. Every worker parks its
-                        work, saves its memory, and reports back — the app closes only
-                        after the orchestrator confirms nothing will be lost.</>
+                        <>オーケストレーターが終了を通知しました。各ワーカーが作業を停止して記憶を保存し、
+                        完了を報告します。データが失われないことを確認してからアプリを閉じます。</>
                       )}
                     </div>
                   </div>
@@ -105,12 +104,12 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                   fontFamily: 'var(--cth-font-display)'
                 }}>
                   {closing!.total > 0
-                    ? `${closing!.acked} / ${closing!.total} WORKERS CONFIRMED${closing!.acked >= closing!.total ? ' — WAITING FOR THE ORCHESTRATOR' : ''}`
-                    : 'NO WORKERS ON THE FLOOR — WAITING FOR THE ORCHESTRATOR'}
+                    ? `${closing!.acked} / ${closing!.total} ワーカー確認済み${closing!.acked >= closing!.total ? ' — オーケストレーターを待機中' : ''}`
+                    : '実行中のワーカーなし — オーケストレーターを待機中'}
                   {closing!.phase === 'timeout' && (
                     <div style={{ marginTop: 6, fontFamily: 'var(--cth-font-body, inherit)' }}>
-                      This is taking a while (an agent may be mid-compaction or deep in a
-                      tool call). Keep waiting, or force quit and accept the data loss.
+                      時間がかかっています（コンパクト処理中、またはツール実行中の可能性があります）。
+                      待機を続けるか、データ損失を承知で強制終了してください。
                     </div>
                   )}
                 </div>
@@ -119,10 +118,10 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                   {closing!.phase !== 'complete' && (
                     <>
                       <PixelButton variant="secondary" size="md" onClick={onCancel} disabled={busy}>
-                        cancel — back to work
+                        キャンセル — 作業へ戻る
                       </PixelButton>
                       <PixelButton variant="destructive" size="md" onClick={confirm} disabled={busy}>
-                        {busy ? 'killing...' : 'force quit now'}
+                        {busy ? '終了中…' : '今すぐ強制終了'}
                       </PixelButton>
                     </>
                   )}
@@ -148,13 +147,11 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                       color: 'var(--cth-ink-900)',
                       marginBottom: 4
                     }}>
-                      {ptyCount} {ptyCount === 1 ? 'AGENT' : 'AGENTS'} STILL RUNNING
+                      {ptyCount}件のエージェントが実行中
                     </div>
                     <div style={{ fontSize: 15, lineHeight: '22px', color: 'var(--cth-ink-700)' }}>
-                      Closing the harness will terminate{' '}
-                      {ptyCount === 1 ? 'the running claude session' : `all ${ptyCount} running claude sessions`}{' '}
-                      and discard any unsaved progress they were holding in memory. The conversation
-                      history inside each session is lost when the PTY exits.
+                      アプリを閉じると、{ptyCount === 1 ? '実行中のClaudeセッション' : `実行中のClaudeセッション${ptyCount}件すべて`}を終了し、
+                      メモリ内の未保存の進捗を破棄します。PTYを終了すると各セッション内の会話履歴も失われます。
                     </div>
                   </div>
                 </div>
@@ -166,9 +163,8 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                   fontSize: 12, lineHeight: '18px',
                   color: 'var(--cth-ink-700)'
                 }}>
-                  Tip: <strong>closing time</strong> is the safe way out — the orchestrator has
-                  every agent commit its work and save its memory, and the app closes itself
-                  once the whole floor has confirmed. No data loss.
+                  ヒント：<strong>安全に終了</strong>を使うと、オーケストレーターが全エージェントに作業のコミットと
+                  記憶の保存を指示し、チーム全体の確認後にアプリを閉じます。データは失われません。
                 </div>
 
                 {closing?.phase === 'error' && (
@@ -179,23 +175,23 @@ export function QuitWarningModal({ ptyCount, closing, onCancel, onConfirm, onClo
                     fontSize: 12, lineHeight: '18px',
                     color: 'var(--cth-ink-900)'
                   }}>
-                    {closing.error ?? 'Closing time could not start.'}
+                    {closing.error ?? '終了処理を開始できませんでした。'}
                   </div>
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
                   <PixelButton variant="secondary" size="md" onClick={onCancel} disabled={busy}>
-                    keep them running
+                    実行を続ける
                   </PixelButton>
                   {onClosingTime && (
                     <PixelButton variant="primary" size="md" onClick={onClosingTime} disabled={busy}>
                       <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                        <Icon name="clock" /> closing time
+                        <Icon name="clock" /> 安全に終了
                       </span>
                     </PixelButton>
                   )}
                   <PixelButton variant="destructive" size="md" onClick={confirm} disabled={busy}>
-                    {busy ? 'killing...' : `kill ${ptyCount === 1 ? 'it' : 'all'} & quit`}
+                    {busy ? '終了中…' : `${ptyCount === 1 ? 'このセッション' : 'すべて'}を終了して閉じる`}
                   </PixelButton>
                 </div>
               </>

@@ -186,9 +186,9 @@ export function MemoryGraphPanel({
         display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', flexShrink: 0,
         borderBottom: '1px solid var(--cth-ink-300)', background: 'var(--cth-cream-100)', flexWrap: 'wrap'
       }}>
-        <Toggle on={showTopics} onClick={() => setShowTopics((v) => !v)} label="topics" />
-        <button onClick={refresh} title="Refresh" style={iconBtn}>
-          <Icon name="gear" /> refresh
+        <Toggle on={showTopics} onClick={() => setShowTopics((v) => !v)} label="トピック" />
+        <button onClick={refresh} title="更新" style={iconBtn}>
+          <Icon name="gear" /> 更新
         </button>
         <div style={{ flex: 1 }} />
         {showTopics && (
@@ -344,7 +344,7 @@ export function MemoryGraphPanel({
           <div style={{
             position: 'absolute', top: 10, left: 0, right: 0, textAlign: 'center',
             fontSize: 12, color: 'var(--cth-ink-500)', pointerEvents: 'none'
-          }}>No messages logged yet — the hive is quiet. Agents shown as roster.</div>
+          }}>記録されたメッセージはまだありません。エージェント一覧だけを表示しています。</div>
         )}
 
         {/* tooltip */}
@@ -374,7 +374,7 @@ function NodeTip({ node, memories }: { node: GraphNode; memories: Record<string,
         <div style={tipTitle}>{node.label}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '2px 0 4px' }}>
           <PixelBadge status={node.status} />
-          <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>{node.degree} message link{node.degree === 1 ? '' : 's'}</span>
+          <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>メッセージリンク {node.degree}件</span>
         </div>
         <div style={tipBody}>{snippet}</div>
       </>
@@ -384,7 +384,7 @@ function NodeTip({ node, memories }: { node: GraphNode; memories: Record<string,
     return (
       <>
         <div style={tipTitle}>{node.label}</div>
-        <div style={tipBody}>shared by {node.weight} agents</div>
+        <div style={tipBody}>{node.weight}件のエージェントが共有</div>
       </>
     );
   }
@@ -400,14 +400,14 @@ function EdgeTip({ edge, nodeById }: { edge: GraphEdge; nodeById: Map<string, Gr
   const a = nodeById.get(edge.source)?.label ?? edge.source;
   const b = nodeById.get(edge.target)?.label ?? edge.target;
   if (edge.kind === 'topic') {
-    return <div style={tipBody}>{a} knows about “{b}”</div>;
+    return <div style={tipBody}>{a}は「{b}」について知っています</div>;
   }
   const arrow = edge.dir === 'both' ? '↔' : edge.dir === 'bwd' ? '←' : '→';
   return (
     <>
       <div style={tipTitle}>{a} {arrow} {b}</div>
       <div style={{ fontSize: 11, color: 'var(--cth-ink-500)', margin: '2px 0' }}>
-        {edge.weight} message{edge.weight === 1 ? '' : 's'} · last: {edge.lastAct ?? '—'}
+        メッセージ {edge.weight}件 · 最終：{edge.lastAct ?? '—'}
       </div>
       {edge.lastSubject && <div style={tipBody}>{truncate(edge.lastSubject, 80)}</div>}
     </>

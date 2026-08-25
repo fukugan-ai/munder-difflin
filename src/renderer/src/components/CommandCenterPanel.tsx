@@ -63,17 +63,17 @@ interface GHIssue {
 
 /** Canonical tab order. Not every entry is always shown — see `visibleTabs`. */
 const TABS: { key: CCTab; label: string; icon: Parameters<typeof Icon>[0]['name'] }[] = [
-  { key: 'terminal', label: 'terminal', icon: 'terminal' },
-  { key: 'floor', label: 'monitor', icon: 'mcp' },
-  { key: 'tasks', label: 'tasks', icon: 'check' },
-  { key: 'human', label: 'ask me', icon: 'bell' },
-  { key: 'triggers', label: 'triggers', icon: 'clock' },
-  { key: 'trigger-history', label: 'history', icon: 'ledger' },
-  { key: 'memory', label: 'memory', icon: 'sparkle' },
-  { key: 'graph', label: 'graph', icon: 'web' },
-  { key: 'activity', label: 'activity', icon: 'bell' },
-  { key: 'skills', label: 'skills', icon: 'sparkle' },
-  { key: 'workers', label: 'workers', icon: 'gear' }
+  { key: 'terminal', label: 'ターミナル', icon: 'terminal' },
+  { key: 'floor', label: 'モニター', icon: 'mcp' },
+  { key: 'tasks', label: 'タスク', icon: 'check' },
+  { key: 'human', label: '確認事項', icon: 'bell' },
+  { key: 'triggers', label: 'トリガー', icon: 'clock' },
+  { key: 'trigger-history', label: '履歴', icon: 'ledger' },
+  { key: 'memory', label: '記憶', icon: 'sparkle' },
+  { key: 'graph', label: 'グラフ', icon: 'web' },
+  { key: 'activity', label: '活動', icon: 'bell' },
+  { key: 'skills', label: 'スキル', icon: 'sparkle' },
+  { key: 'workers', label: 'ワーカー', icon: 'gear' }
 ];
 
 /** @param fullscreen this instance IS the fullscreen overlay, so it owns the pty
@@ -171,13 +171,13 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
           <div style={{
             fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px', color: 'var(--cth-ink-900)',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-          }}>COMMAND CENTER</div>
+          }}>コマンドセンター</div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 1, minWidth: 0 }}>
             <PixelBadge status={agent.status} />
             <span style={{
               fontSize: 12, color: 'var(--cth-ink-500)',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-            }}>Michael runs the floor</span>
+            }}>Michaelがチームを統括</span>
           </div>
         </div>
         {/* v0.3.4: floor-wide auto-delivery lives HERE (one switch for every
@@ -210,8 +210,8 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
           }}>
             <span
               className="cth-tip cth-tip-wrap"
-              data-tip="Open the IDE: browse and edit files in the selected agent's workspace, and see uncommitted changes as a diff."
-              aria-label="Open the IDE"
+              data-tip="IDEを開き、選択中のエージェントのファイルを参照・編集し、未コミットの変更を差分で確認します。"
+              aria-label="IDEを開く"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
             >
               <Icon name="code" /> IDE
@@ -287,7 +287,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {tab === 'terminal' && (
           isFullscreenedHere ? (
-            <Centered>Terminal is open in fullscreen. Press Esc to bring it back.</Centered>
+            <Centered>ターミナルは全画面で表示中です。Escを押すと戻ります。</Centered>
           ) : agent.ptyId ? (
             <>
               <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -310,7 +310,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
               <MessageQueueComposer agent={agent} />
             </>
           ) : (
-            <Centered>Michael has no live terminal.</Centered>
+            <Centered>Michaelのターミナルは実行されていません。</Centered>
           )
         )}
         {tab === 'floor' && <FloorTab seed={dispatchSeed} />}
@@ -627,13 +627,13 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
 
   return (
     <Scroll>
-      <Section title="DISPATCH — VIA MICHAEL">
+      <Section title="MICHAELへ依頼">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
           <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)', flexShrink: 0 }}>
-            SUGGESTED OWNER
+            おすすめの担当
           </span>
           <Select value={dispatchTo} onChange={setDispatchTo}>
-            <option value="">Michael decides</option>
+            <option value="">Michaelが判断</option>
             {agents.filter((a) => !a.isGod).map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
@@ -643,18 +643,18 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
           value={dispatchText}
           onChange={(e) => setDispatchText(e.target.value)}
           rows={2}
-          placeholder="Describe the task… (Michael decomposes, writes the card, and assigns)"
+          placeholder="タスクを説明…（Michaelが分解し、カードを作成して割り当てます）"
           style={textareaStyle}
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
           <PixelButton variant="primary" size="sm" onClick={dispatch} disabled={!dispatchText.trim()}>
-            dispatch
+          依頼
           </PixelButton>
           {dispatchMsg && <span style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>{dispatchMsg}</span>}
         </div>
       </Section>
 
-      <Section title="AGENTS">
+      <Section title="エージェント">
         {agents.map((a) => {
           const agentProvider = inferAgentProvider(a.command, a.provider);
           const agentPreset = providerPreset(agentProvider);
@@ -698,7 +698,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
               <PixelBadge status={armed ? 'looping' : a.status} />
               {armed && <span title={breaker?.reason} style={{ color: 'var(--cth-coral)', fontSize: 12 }}>⚠</span>}
               <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--cth-ink-500)' }}>
-                {(toolCounts[a.id] ?? 0)} tool calls
+                ツール呼び出し {(toolCounts[a.id] ?? 0)}回
               </span>
               <TokenLimitEditor value={agentCap} onSet={(t) => setAgentCap(a.id, t)} />
             </div>
@@ -719,7 +719,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                   background: 'var(--cth-paper-200)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', color: 'var(--cth-ink-700)'
                 }}>{lastTool[a.id]}</span>
               )}
-              <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 10, color: 'var(--cth-ink-300)', flexShrink: 0 }}>budget</span>
+              <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 10, color: 'var(--cth-ink-300)', flexShrink: 0 }}>予算</span>
               <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-900)', width: 56, textAlign: 'right' }}>{fmtTokens(tokens)}</span>
               <div
                 title={`CUMULATIVE session usage: ${tokens.toLocaleString()} of ${denom.toLocaleString()} tokens${agentCap ? ' (agent limit)' : ' (floor budget)'} — not the context window`}
@@ -736,7 +736,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                 spend, this one is headroom before compaction. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ flex: 1 }} />
-              <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 10, color: 'var(--cth-ink-300)', flexShrink: 0 }}>ctx</span>
+              <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 10, color: 'var(--cth-ink-300)', flexShrink: 0 }}>文脈</span>
               {a.contextTokens !== undefined && a.contextLimit ? (() => {
                 const cpct = Math.min(100, Math.round((a.contextTokens! / a.contextLimit!) * 100));
                 const ccolor = cpct >= 88 ? 'var(--cth-coral)' : cpct >= 75 ? 'var(--cth-lemon)' : `var(--cth-${a.accent})`;
@@ -756,7 +756,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                 );
               })() : (
                 <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-300)' }}>
-                  no status tick yet
+                  状態データはまだありません
                 </span>
               )}
             </div>
@@ -803,7 +803,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                           key={`${preset.id}:${model.id ?? 'cli-default'}`}
                           value={encodeProviderModel(preset.id, model.id)}
                         >
-                          {model.label}{isHarnessDefault ? ' · default' : ''}
+                          {model.label}{isHarnessDefault ? ' · 既定' : ''}
                         </option>
                       );
                     })}
@@ -812,8 +812,8 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
               </Select>
               <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>
                 {restarting === a.id
-                  ? 'restarting…'
-                  : `${agentPreset.label} model (restarts agent)`}
+                  ? '再起動中…'
+                  : `${agentPreset.label}モデル（エージェントを再起動）`}
               </span>
               {/* Restart & Continue — kill + respawn keeping the SAME model and
                   resuming the prior conversation (--resume). Use this to redraw a
@@ -827,8 +827,8 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                   disabled={restarting === a.id}
                   onClick={() => restartWithModel(a, a.model, { resume: true })}
                 >
-                  <span title="Kill and respawn this agent, resuming its current conversation — fixes a corrupted/garbled terminal without losing context">
-                    restart &amp; continue
+                  <span title="現在の会話を維持してエージェントを終了・再起動します。コンテキストを失わずに表示の乱れを修復できます">
+                    再起動して続行
                   </span>
                 </PixelButton>
               </>}
@@ -841,7 +841,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
             )}
             {a.isGod && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, color: 'var(--cth-ink-500)', flexShrink: 0 }}>engine:</span>
+                <span style={{ fontSize: 11, color: 'var(--cth-ink-500)', flexShrink: 0 }}>エンジン：</span>
                 <Select
                   value={engineProvider}
                   disabled={restarting === a.id}
@@ -874,13 +874,13 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                   onClick={async () => {
                     const currentProvider = inferAgentProvider(a.command, a.provider);
                     if (engineProvider !== currentProvider) {
-                      if (!window.confirm("This restarts Michael; a conversation on a different engine can't be resumed.")) return;
+                      if (!window.confirm('Michaelを再起動します。異なるエンジンの会話は再開できません。')) return;
                     }
                     await window.cth.updateConfig({ godProvider: engineProvider, godModel: engineModel });
                     await restartWithModel(a, engineModel, { provider: engineProvider, resume: false });
                   }}
                 >
-                  {restarting === a.id ? 'restarting…' : 'apply'}
+                  {restarting === a.id ? '再起動中…' : '適用'}
                 </PixelButton>
                 {/* Redraw a garbled terminal without losing the thread (resume the
                     SAME engine+model). Kept here since the god has no per-agent row above. */}
@@ -890,8 +890,8 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                   disabled={restarting === a.id}
                   onClick={() => restartWithModel(a, a.model, { resume: true })}
                 >
-                  <span title="Kill and respawn Michael, resuming the current conversation — fixes a corrupted/garbled terminal without losing context">
-                    restart &amp; continue
+                  <span title="現在の会話を維持してMichaelを終了・再起動します。コンテキストを失わずに表示の乱れを修復できます">
+                    再起動して続行
                   </span>
                 </PixelButton>
               </div>
@@ -905,14 +905,14 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
           background: 'var(--cth-cream-200)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)',
           fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-900)', flexWrap: 'wrap'
         }}>
-          <span>Σ <strong>{fmtTokens(sumTokens)}</strong> tok</span>
-          <span style={{ color: 'var(--cth-ink-700)' }}>inputs {fmtTokens(sumInput)} (cache {fleetCachePct}%)</span>
-          <span style={{ color: 'var(--cth-ink-700)' }}>{Math.round(sumRate).toLocaleString()} tok/min</span>
+          <span>Σ <strong>{fmtTokens(sumTokens)}</strong>トークン</span>
+          <span style={{ color: 'var(--cth-ink-700)' }}>入力 {fmtTokens(sumInput)}（キャッシュ {fleetCachePct}%）</span>
+          <span style={{ color: 'var(--cth-ink-700)' }}>{Math.round(sumRate).toLocaleString('ja-JP')}トークン/分</span>
         </div>
         <div style={{ marginTop: 6 }}>
           <Muted>
-            live from each agent&apos;s OpenTelemetry · bars show tokens used vs each agent&apos;s limit, else the {fmtTokens(floorCap)} floor budget
-            {tokenCap && tokenCap > 0 ? '' : ' (default — set a floor token budget in Settings)'}
+            各エージェントのOpenTelemetryからリアルタイム取得 · バーはエージェント上限に対する使用量を示し、未設定時は下限予算{fmtTokens(floorCap)}を使います
+            {tokenCap && tokenCap > 0 ? '' : '（既定値 — 設定で下限トークン予算を指定できます）'}
           </Muted>
         </div>
       </Section>
@@ -920,22 +920,22 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
       <ArchivedSection />
 
 
-      <Section title="DIRECTORIES">
-        {repos.length === 0 && <Muted>No registered repos.</Muted>}
+      <Section title="ディレクトリ">
+        {repos.length === 0 && <Muted>登録済みのリポジトリはありません。</Muted>}
         {repos.map((r) => (
           <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
             <span style={{ flex: 1, fontSize: 12, color: 'var(--cth-ink-700)', wordBreak: 'break-all' }}>{r}</span>
             <button
               onClick={() => window.cth.openTerminalAt(r)}
-              title="Open in Terminal.app"
+              title="Terminal.appで開く"
               style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--cth-ink-500)' }}
             ><Icon name="terminal" /></button>
           </div>
         ))}
       </Section>
 
-      <Section title="ISSUES">
-        {repos.length === 0 && <Muted>No registered repos.</Muted>}
+      <Section title="ISSUE">
+        {repos.length === 0 && <Muted>登録済みのリポジトリはありません。</Muted>}
         {repos.length > 0 && (
           <>
             <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
@@ -945,7 +945,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                 ))}
               </Select>
               <PixelButton variant="primary" size="sm" onClick={fetchIssues} disabled={issuesLoading}>
-                {issuesLoading ? 'fetching…' : 'Fetch issues'}
+                {issuesLoading ? '取得中…' : 'Issueを取得'}
               </PixelButton>
             </div>
             {issuesError && (
@@ -955,7 +955,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                 wordBreak: 'break-word'
               }}>{issuesError}</div>
             )}
-            {!issuesError && !issuesLoading && issues.length === 0 && <Muted>No issues fetched yet.</Muted>}
+            {!issuesError && !issuesLoading && issues.length === 0 && <Muted>Issueはまだ取得されていません。</Muted>}
             {issues.map((issue) => (
               <div key={issue.number} style={{
                 display: 'flex', flexDirection: 'column', gap: 4,
@@ -967,7 +967,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                     <strong>#{issue.number}</strong> {issue.title}
                   </span>
                   <PixelButton variant="secondary" size="sm" onClick={() => assignIssue(issue)}>
-                    Assign
+                    割り当て
                   </PixelButton>
                 </div>
                 {issue.labels.length > 0 && (
@@ -998,7 +998,7 @@ function ArchivedSection() {
   const [open, setOpen] = useState(false);
   if (archivedAgents.length === 0) return null;
   return (
-    <Section title={`ARCHIVED (${archivedAgents.length})`}>
+    <Section title={`アーカイブ（${archivedAgents.length}）`}>
       <button
         onClick={() => setOpen((v) => !v)}
         style={{
@@ -1008,7 +1008,7 @@ function ArchivedSection() {
           fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-900)',
           marginBottom: open ? 6 : 0
         }}
-      >{open ? '▾' : '▸'} {open ? 'hide' : 'show'} closed agents</button>
+      >{open ? '▾' : '▸'} 終了したエージェントを{open ? '隠す' : '表示'}</button>
       {open && archivedAgents.map((a) => (
         <div key={a.id} style={{
           display: 'flex', alignItems: 'center', gap: 8,
@@ -1063,7 +1063,7 @@ function MemoryTab({ godId, who: controlledWho, onWho }: { godId: string; who?: 
     setBusy(true);
     try {
       const res = await window.cth.searchMemory(query.trim());
-      setSearchOut(res.ok ? (res.output || 'Nothing matched yet.') : `Couldn't search: ${res.error}`);
+      setSearchOut(res.ok ? (res.output || '一致する項目はありません。') : `検索できませんでした：${res.error}`);
     } finally { setBusy(false); }
   };
 
@@ -1079,13 +1079,13 @@ function MemoryTab({ godId, who: controlledWho, onWho }: { godId: string; who?: 
 
   return (
     <Scroll>
-      <Section title="TEXT SEARCH (board, tasks, memory)">
+      <Section title="テキスト検索（ボード、タスク、記憶）">
         <div style={{ display: 'flex', gap: 6 }}>
           <input
             value={textQuery}
             onChange={(e) => setTextQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') textSearch(); }}
-            placeholder="Find exact text across hive files…"
+          placeholder="チームのファイルから完全一致で検索…"
             style={{ ...textareaStyle, height: 30 }}
           />
           <PixelButton variant="primary" size="sm" onClick={textSearch} disabled={textBusy || !textQuery.trim()}>
@@ -1102,16 +1102,16 @@ function MemoryTab({ godId, who: controlledWho, onWho }: { godId: string; who?: 
             ))}
           </div>
         )}
-        {textSearched && textResults.length === 0 && <Muted>Nothing matched.</Muted>}
+        {textSearched && textResults.length === 0 && <Muted>一致する項目はありません。</Muted>}
       </Section>
 
-      <Section title="SEMANTIC SEARCH (MemPalace)">
+      <Section title="意味検索（MemPalace）">
         <div style={{ display: 'flex', gap: 6 }}>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') search(); }}
-            placeholder="What does the hive know about…"
+          placeholder="チームの記憶から調べる内容…"
             style={{ ...textareaStyle, height: 30 }}
           />
           <PixelButton variant="primary" size="sm" onClick={search} disabled={busy || !query.trim()}>
@@ -1121,7 +1121,7 @@ function MemoryTab({ godId, who: controlledWho, onWho }: { godId: string; who?: 
         {searchOut && <Pre>{searchOut}</Pre>}
       </Section>
 
-      <Section title="MEMORY FILE">
+      <Section title="記憶ファイル">
         <Select value={who} onChange={setWho}>
           {agents.map((a) => (<option key={a.id} value={a.id}>{a.name}</option>))}
         </Select>
@@ -1172,7 +1172,7 @@ function TokenLimitEditor({ value, onSet }: { value?: number; onSet: (tokens: nu
     return (
       <button
         onClick={() => { setText(value != null ? String(value) : ''); setEditing(true); }}
-        title="Set this agent's total token limit"
+        title="このエージェントの合計トークン上限を設定"
         style={{
           flexShrink: 0, padding: '1px 6px', border: 'none', cursor: 'pointer',
           background: value && value > 0 ? 'var(--cth-lemon)' : 'var(--cth-cream-200)',
@@ -1180,7 +1180,7 @@ function TokenLimitEditor({ value, onSet }: { value?: number; onSet: (tokens: nu
           fontFamily: 'var(--cth-font-ui)', fontSize: 11, color: 'var(--cth-ink-900)'
         }}
       >{value && value > 0
-        ? <>limit <span style={{ fontFamily: 'var(--cth-font-mono)' }}>{fmtTokens(value)}</span></>
+        ? <>上限 <span style={{ fontFamily: 'var(--cth-font-mono)' }}>{fmtTokens(value)}</span></>
         : 'set limit'}</button>
     );
   }
@@ -1194,7 +1194,7 @@ function TokenLimitEditor({ value, onSet }: { value?: number; onSet: (tokens: nu
           else if (e.key === 'Escape') { skipBlur.current = true; setEditing(false); }
         }}
         onBlur={() => { if (skipBlur.current) { skipBlur.current = false; return; } commit(); }}
-        placeholder="tokens"
+        placeholder="トークン"
         style={{
           width: 84, padding: '2px 4px', background: 'var(--cth-paper-100)', border: 'none',
           boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)', fontFamily: 'var(--cth-font-mono)',
@@ -1202,7 +1202,7 @@ function TokenLimitEditor({ value, onSet }: { value?: number; onSet: (tokens: nu
         }}
       />
       <button
-        onMouseDown={(e) => e.preventDefault()} onClick={commit} title="Save limit"
+        onMouseDown={(e) => e.preventDefault()} onClick={commit} title="上限を保存"
         style={{ flexShrink: 0, padding: '1px 5px', border: 'none', cursor: 'pointer', background: 'var(--cth-mint)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', fontSize: 11, color: 'var(--cth-ink-900)' }}
       >✓</button>
     </span>
@@ -1241,8 +1241,8 @@ function ActivityTab() {
 
   return (
     <Scroll>
-      <Section title="ACTIVITY">
-        {log.length === 0 && <Muted>Nothing yet.</Muted>}
+      <Section title="アクティビティ">
+        {log.length === 0 && <Muted>まだありません。</Muted>}
         {[...log].reverse().map((e, i) => (
           <div key={i} style={{ fontSize: 12, color: 'var(--cth-ink-700)', padding: '2px 0', display: 'flex', gap: 6 }}>
             <span style={{ color: 'var(--cth-ink-300)', flexShrink: 0 }}>{e.kind ?? '·'}</span>
@@ -1251,7 +1251,7 @@ function ActivityTab() {
         ))}
       </Section>
 
-      <Section title="BOARD">
+      <Section title="ボード">
         <Pre>{board || 'The board is empty.'}</Pre>
       </Section>
     </Scroll>

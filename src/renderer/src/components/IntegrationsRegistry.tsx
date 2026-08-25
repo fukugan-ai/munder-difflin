@@ -180,12 +180,12 @@ export function IntegrationsRegistry() {
 
   const onRemove = async (r: IntegrationRecordView) => {
     setBusy(true);
-    try { await integrationsClient.remove(r.id); setRowTest((m) => { const n = { ...m }; delete n[r.id]; return n; }); await refresh(); flash(`Removed “${r.label}”.`); }
-    catch { flash('Could not remove.'); }
+    try { await integrationsClient.remove(r.id); setRowTest((m) => { const n = { ...m }; delete n[r.id]; return n; }); await refresh(); flash(`「${r.label}」を削除しました。`); }
+    catch { flash('削除できませんでした。'); }
     finally { setBusy(false); }
   };
 
-  const fmtTest = (t: TestResult) => t.ok ? `✓ Connected${t.status ? ` (${t.status})` : ''}` : `✕ ${t.error || 'Failed'}${t.status ? ` (${t.status})` : ''}`;
+  const fmtTest = (t: TestResult) => t.ok ? `✓ 接続済み${t.status ? ` (${t.status})` : ''}` : `✕ ${t.error || '失敗'}${t.status ? ` (${t.status})` : ''}`;
 
   const onTestRow = async (r: IntegrationRecordView) => {
     setTestingId(r.id);
@@ -205,10 +205,10 @@ export function IntegrationsRegistry() {
   if (view === 'gallery') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <button type="button" onClick={goList} style={linkBtn}>← Integrations</button>
+        <button type="button" onClick={goList} style={linkBtn}>← 外部連携</button>
         <div>
-          <div style={{ ...dispLabel, marginBottom: 4 }}>Pick a template</div>
-          <span style={subText}>Choose what you’re connecting. The template sets the defaults. Pick <b>Custom REST</b> for anything not listed.</span>
+          <div style={{ ...dispLabel, marginBottom: 4 }}>テンプレートを選択</div>
+          <span style={subText}>接続するサービスを選んでください。一覧にないものは<b>カスタムREST</b>を選びます。</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
           {templates.map((t) => {
@@ -230,8 +230,8 @@ export function IntegrationsRegistry() {
           })}
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <PixelButton variant="secondary" size="sm" onClick={goList}>cancel</PixelButton>
-          <PixelButton variant="primary" size="sm" onClick={continueFromGallery} disabled={!picked}>continue →</PixelButton>
+          <PixelButton variant="secondary" size="sm" onClick={goList}>キャンセル</PixelButton>
+          <PixelButton variant="primary" size="sm" onClick={continueFromGallery} disabled={!picked}>続ける →</PixelButton>
         </div>
       </div>
     );
@@ -246,7 +246,7 @@ export function IntegrationsRegistry() {
     const isUsable = usable(draft);
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <button type="button" onClick={draft.isNew ? startAdd : goList} style={linkBtn}>{draft.isNew ? '← Templates' : '← Integrations'}</button>
+        <button type="button" onClick={draft.isNew ? startAdd : goList} style={linkBtn}>{draft.isNew ? '← テンプレート' : '← 外部連携'}</button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'var(--cth-cream-100)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)' }}>
           <Glyph mono={g.mono} bg={g.bg} lg />
@@ -258,39 +258,39 @@ export function IntegrationsRegistry() {
 
         {/* Label */}
         <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <span style={fieldLabel}>Label</span>
+          <span style={fieldLabel}>表示名</span>
           <input value={draft.label} onChange={(e) => patch({ label: e.target.value, ...(draft.isNew ? { id: slugify(e.target.value) } : {}) })} placeholder={`e.g. ${tpl?.label ?? 'My API'} (prod)`} style={inputStyle} />
-          <span style={hint}>Shown in your list. Id: <code style={{ fontFamily: 'var(--cth-font-mono)' }}>{slugify(draft.id || draft.label) || '—'}</code>{draft.isNew ? '' : ' (fixed)'}</span>
+          <span style={hint}>一覧に表示されます。ID: <code style={{ fontFamily: 'var(--cth-font-mono)' }}>{slugify(draft.id || draft.label) || '—'}</code>{draft.isNew ? '' : '（固定）'}</span>
         </label>
 
         {/* Base URL — editable for custom-rest, fixed for presets */}
         <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <span style={fieldLabel}>Base URL</span>
+          <span style={fieldLabel}>ベースURL</span>
           <input value={draft.baseUrl} onChange={(e) => patch({ baseUrl: e.target.value })} placeholder="https://api.example.com" readOnly={draft.kind !== 'custom-rest'} style={{ ...inputStyle, fontFamily: 'var(--cth-font-mono)', opacity: draft.kind !== 'custom-rest' ? 0.7 : 1 }} />
-          {draft.kind !== 'custom-rest' && <span style={hint}>Set by the {tpl?.label ?? 'preset'} template.</span>}
+          {draft.kind !== 'custom-rest' && <span style={hint}>{tpl?.label ?? 'プリセット'}テンプレートで設定されます。</span>}
         </label>
 
         {/* Auth type — selectable only for custom-rest */}
         {draft.kind === 'custom-rest' ? (
           <label style={{ display: 'flex', flexDirection: 'column', gap: 5, maxWidth: 260 }}>
-            <span style={fieldLabel}>Authentication</span>
+            <span style={fieldLabel}>認証</span>
             <select value={draft.authType} onChange={(e) => patch({ authType: e.target.value as IntegrationAuthType })} style={{ ...inputStyle, fontFamily: 'var(--cth-font-mono)' }}>
               {CUSTOM_AUTH.map((a) => <option key={a} value={a}>{AUTH_LABEL[a]}</option>)}
             </select>
           </label>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={fieldLabel}>Authentication</span>
-            <span style={hint}>{AUTH_LABEL[draft.authType]} (set by template)</span>
+            <span style={fieldLabel}>認証</span>
+            <span style={hint}>{AUTH_LABEL[draft.authType]}（テンプレートで設定）</span>
           </div>
         )}
 
         {/* Custom header name (header auth only) */}
         {draft.authType === 'header' && (
           <label style={{ display: 'flex', flexDirection: 'column', gap: 5, maxWidth: 320 }}>
-            <span style={fieldLabel}>Header name</span>
+            <span style={fieldLabel}>ヘッダー名</span>
             <input value={draft.authHeader} onChange={(e) => patch({ authHeader: e.target.value })} placeholder="X-Api-Key" style={{ ...inputStyle, fontFamily: 'var(--cth-font-mono)' }} />
-            <span style={hint}>The secret is sent as <code style={{ fontFamily: 'var(--cth-font-mono)' }}>{(draft.authHeader.trim() || 'X-Header')}: &lt;secret&gt;</code>.</span>
+            <span style={hint}>秘密情報は <code style={{ fontFamily: 'var(--cth-font-mono)' }}>{(draft.authHeader.trim() || 'X-Header')}: &lt;secret&gt;</code> として送信されます。</span>
           </label>
         )}
 
@@ -300,17 +300,17 @@ export function IntegrationsRegistry() {
             <span style={fieldLabel}>{secretLabel}</span>
             {showSavedPill ? (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 12, color: 'var(--cth-ink-500)', background: 'var(--cth-paper-100)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', padding: '6px 10px', letterSpacing: 2 }}>•••••••• saved</span>
-                <PixelButton variant="secondary" size="sm" onClick={() => { setReplacing(true); setShowSecret(false); patch({ secret: '' }); }}>Replace key</PixelButton>
+                <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 12, color: 'var(--cth-ink-500)', background: 'var(--cth-paper-100)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', padding: '6px 10px', letterSpacing: 2 }}>•••••••• 保存済み</span>
+                <PixelButton variant="secondary" size="sm" onClick={() => { setReplacing(true); setShowSecret(false); patch({ secret: '' }); }}>キーを変更</PixelButton>
               </div>
             ) : (
               <>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input type={showSecret ? 'text' : 'password'} value={draft.secret} onChange={(e) => patch({ secret: e.target.value })} placeholder={`Paste your ${secretLabel.toLowerCase()}`} autoComplete="off" style={{ ...inputStyle, fontFamily: 'var(--cth-font-mono)' }} />
-                  <PixelButton variant="secondary" size="sm" onClick={() => setShowSecret((s) => !s)} disabled={!draft.secret}>{showSecret ? 'hide' : 'show'}</PixelButton>
+                  <PixelButton variant="secondary" size="sm" onClick={() => setShowSecret((s) => !s)} disabled={!draft.secret}>{showSecret ? '隠す' : '表示'}</PixelButton>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', padding: '7px 9px', background: 'var(--cth-cream-100)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-100, var(--cth-ink-300))', ...hint }}>
-                  🔒&nbsp;<span><b style={{ color: 'var(--cth-ink-700)' }}>Write-only.</b> Encrypted in the main process and never shown again. To change it, paste a new key — the old one can’t be read back.{!draft.isNew && draft.hasSecret ? ' Leave blank to keep the saved key.' : ''}</span>
+                  🔒&nbsp;<span><b style={{ color: 'var(--cth-ink-700)' }}>書き込み専用。</b>メインプロセスで暗号化され、再表示されません。変更するには新しいキーを貼り付けてください。{!draft.isNew && draft.hasSecret ? ' 保存済みのキーを維持する場合は空欄にします。' : ''}</span>
                 </div>
                 {tpl?.secretHelp && <span style={hint}>{tpl.secretHelp}</span>}
               </>
@@ -320,17 +320,17 @@ export function IntegrationsRegistry() {
 
         {/* Enabled gate + worker availability */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={fieldLabel}>Availability</span>
+          <span style={fieldLabel}>利用範囲</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <PixelButton variant={draft.enabled ? 'primary' : 'secondary'} size="sm" onClick={() => patch({ enabled: !draft.enabled })}>{draft.enabled ? 'enabled' : 'disabled'}</PixelButton>
             <span style={hint}>{isUsable ? 'Available to all workers.' : needsSecret(draft.authType) && !(draft.hasSecret || draft.secret.trim()) ? 'Add a secret and enable to make it available.' : draft.enabled ? 'Ready once saved.' : 'Disabled — no worker can use it.'}</span>
           </div>
-          <span style={hint}>v1 grants every enabled integration to all workers. Per-worker scoping is coming.</span>
+          <span style={hint}>v1では有効な外部連携をすべてのワーカーが利用できます。ワーカー別の設定は今後対応予定です。</span>
         </div>
 
         {/* Test connection (saved integrations only — broker probes by id) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <span style={fieldLabel}>Test connection</span>
+          <span style={fieldLabel}>接続テスト</span>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <PixelButton variant="secondary" size="sm" onClick={() => { void onTestCfg(); }} disabled={draft.isNew || testing}>{testing ? 'testing…' : 'Test connection'}</PixelButton>
             {cfgTest && <span style={{ fontSize: 12, color: cfgTest.ok ? 'var(--cth-mint-700, #1f7a4d)' : 'var(--cth-danger, #6E1423)' }}>{fmtTest(cfgTest)}</span>}
@@ -340,8 +340,8 @@ export function IntegrationsRegistry() {
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
           {(err || note) && <span style={{ marginRight: 'auto', fontSize: 12, color: err ? 'var(--cth-danger, #6E1423)' : 'var(--cth-ink-500)' }}>{err || note}</span>}
-          <PixelButton variant="secondary" size="sm" onClick={goList} disabled={busy}>cancel</PixelButton>
-          <PixelButton variant="primary" size="sm" onClick={() => { void onSave(); }} disabled={busy}>{busy ? '…' : draft.isNew ? 'Save integration' : 'Save changes'}</PixelButton>
+          <PixelButton variant="secondary" size="sm" onClick={goList} disabled={busy}>キャンセル</PixelButton>
+          <PixelButton variant="primary" size="sm" onClick={() => { void onSave(); }} disabled={busy}>{busy ? '…' : draft.isNew ? '外部連携を保存' : '変更を保存'}</PixelButton>
         </div>
       </div>
     );
@@ -353,16 +353,16 @@ export function IntegrationsRegistry() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={dispLabel}>Integrations</div>
-          <span style={{ ...subText, maxWidth: 440 }}>Connect outside tools so your agents can read and act on them. Secrets are stored encrypted in the main process and never shown again.</span>
+          <div style={dispLabel}>外部連携</div>
+          <span style={{ ...subText, maxWidth: 440 }}>外部ツールへ接続し、エージェントから参照・操作できるようにします。秘密情報は暗号化保存され、再表示されません。</span>
         </div>
-        {records.length > 0 && <PixelButton variant="primary" size="sm" onClick={startAdd} disabled={busy || templates.length === 0}>+ add integration</PixelButton>}
+        {records.length > 0 && <PixelButton variant="primary" size="sm" onClick={startAdd} disabled={busy || templates.length === 0}>+ 外部連携を追加</PixelButton>}
       </div>
 
       {records.length === 0 ? (
         <div style={{ padding: 24, textAlign: 'center', background: 'var(--cth-paper-100)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)' }}>
-          <p style={{ margin: '0 0 12px', fontSize: 12, lineHeight: '18px', color: 'var(--cth-ink-500)' }}>No integrations yet. Connect GitHub or a custom REST API so your agents can use it.</p>
-          <PixelButton variant="primary" size="sm" onClick={startAdd} disabled={templates.length === 0}>+ add your first integration</PixelButton>
+          <p style={{ margin: '0 0 12px', fontSize: 12, lineHeight: '18px', color: 'var(--cth-ink-500)' }}>外部連携はまだありません。GitHubまたはカスタムREST APIへ接続すると、エージェントから利用できます。</p>
+          <PixelButton variant="primary" size="sm" onClick={startAdd} disabled={templates.length === 0}>+ 最初の外部連携を追加</PixelButton>
         </div>
       ) : (
         <>
@@ -388,7 +388,7 @@ export function IntegrationsRegistry() {
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: st.color, whiteSpace: 'nowrap' }}><span style={{ fontSize: 10 }}>{st.dot}</span> {st.text}</span>
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                       <PixelButton variant="secondary" size="sm" onClick={() => { void onTestRow(r); }} disabled={busy || testingId === r.id}>{testingId === r.id ? '…' : 'test'}</PixelButton>
-                      <PixelButton variant="ghost" size="sm" onClick={() => startEdit(r)} disabled={busy}>edit</PixelButton>
+                      <PixelButton variant="ghost" size="sm" onClick={() => startEdit(r)} disabled={busy}>編集</PixelButton>
                       <PixelButton variant="ghost" size="sm" onClick={() => { void onRemove(r); }} disabled={busy}>✕</PixelButton>
                     </div>
                   </div>

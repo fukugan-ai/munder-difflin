@@ -217,7 +217,7 @@ export function AgentCard({
                     fontFamily: 'var(--cth-font-display)', fontSize: 7, lineHeight: '11px',
                     background: `var(--cth-${accent})`, color: 'var(--cth-ink-900)',
                     padding: '1px 4px 0', flexShrink: 0
-                  }}>BOSS</span>
+                  }}>ボス</span>
                 )}
               </span>
               {/* flexShrink:0 — the badge is a fixed 2-to-5 character chip; when

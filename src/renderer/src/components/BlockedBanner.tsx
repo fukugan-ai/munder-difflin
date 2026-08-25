@@ -24,7 +24,7 @@ export function BlockedBanner({ reason, onAction }: BlockedBannerProps) {
         color: 'var(--cth-ink-900)',
         textTransform: 'uppercase'
       }}>
-        <Icon name="bell" /> needs you
+        <Icon name="bell" /> 確認が必要です
       </div>
       <div style={{
         fontFamily: 'var(--cth-font-ui)',

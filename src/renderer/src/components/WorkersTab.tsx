@@ -90,18 +90,18 @@ export function WorkersTab() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '12px 14px 16px', overflow: 'auto' }}>
       <div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <span style={sectionHead}>Live workers</span>
+          <span style={sectionHead}>稼働中のワーカー</span>
           <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-700)' }}>
             {live.length} / {max}
           </span>
         </div>
         <p style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 11, color: 'var(--cth-ink-700)', margin: '2px 0 8px' }}>
-          Isolated workers Michael spins up to handle Slack messages — they run to completion, reply in-thread, then tear down.
+          MichaelがSlackメッセージを処理するために起動する分離ワーカーです。完了まで実行し、スレッドへ返信して終了します。
         </p>
 
         {live.length === 0 ? (
           <div style={{ ...card, color: 'var(--cth-ink-700)', fontFamily: 'var(--cth-font-ui)', fontSize: 12 }}>
-            No workers running right now.
+          現在実行中のワーカーはありません。
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -115,7 +115,7 @@ export function WorkersTab() {
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                     }}>{w.name}</span>
                     {w.hasSlack && (
-                      <span title="replies to a Slack thread" style={{
+                      <span title="Slackスレッドへ返信" style={{
                         fontFamily: 'var(--cth-font-mono)', fontSize: 10, color: 'var(--cth-ink-700)',
                         boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)', padding: '0 5px'
                       }}>slack</span>
@@ -125,18 +125,18 @@ export function WorkersTab() {
                     onClick={() => stop(w.workerId)}
                     disabled={w.releasing || !!stopping[w.workerId]}
                   >
-                    {w.releasing || stopping[w.workerId] ? 'stopping…' : 'stop'}
+                    {w.releasing || stopping[w.workerId] ? '停止中…' : '停止'}
                   </PixelButton>
                 </div>
                 <div style={metaRow}>
-                  <span title="worker / PTY id">{w.workerId}</span>
-                  <span title="base branch the worktree was cut from">base: {w.baseBranch}</span>
-                  <span title="time since spawn">up {relAge(w.ageMs)}</span>
-                  <span title="time since last terminal output">
-                    {w.idleMs === null ? 'pty gone' : `idle ${relAge(w.idleMs)}`}
+                  <span title="ワーカー / PTY ID">{w.workerId}</span>
+                  <span title="worktree作成元のベースブランチ">ベース: {w.baseBranch}</span>
+                  <span title="起動してからの時間">稼働 {relAge(w.ageMs)}</span>
+                  <span title="ターミナルの最終出力からの時間">
+                    {w.idleMs === null ? 'PTY終了' : `待機 ${relAge(w.idleMs)}`}
                   </span>
-                  <span title="cumulative tokens (input+output+cache)">
-                    tokens {fmtTokens(w.tokensUsed)}{w.tokenCap !== null ? ` / ${fmtTokens(w.tokenCap)}` : ' · uncapped'}
+                  <span title="累計トークン（入力＋出力＋キャッシュ）">
+                    トークン {fmtTokens(w.tokensUsed)}{w.tokenCap !== null ? ` / ${fmtTokens(w.tokenCap)}` : ' · 上限なし'}
                   </span>
                 </div>
               </div>
@@ -147,9 +147,9 @@ export function WorkersTab() {
 
       {preserved.length > 0 && (
         <div>
-          <span style={sectionHead}>Preserved worktrees ({preserved.length})</span>
+          <span style={sectionHead}>保持中のworktree（{preserved.length}）</span>
           <p style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 11, color: 'var(--cth-ink-700)', margin: '2px 0 8px' }}>
-            Finished workers whose worktree held un-integrated work — kept (never auto-discarded) and auto-reclaimed once the work lands in its base branch.
+            未統合の作業が残る終了済みワーカーのworktreeです。自動破棄せず保持し、作業がベースブランチへ反映されると自動回収します。
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {preserved.map((p) => (
@@ -159,8 +159,8 @@ export function WorkersTab() {
                 </div>
                 <div style={metaRow}>
                   <span style={{ wordBreak: 'break-all' }}>{p.wtPath}</span>
-                  <span>base: {p.baseBranch}</span>
-                  <span>kept {relAge(Math.max(0, Date.now() - p.preservedAt))} ago</span>
+                  <span>ベース：{p.baseBranch}</span>
+                  <span>{relAge(Math.max(0, Date.now() - p.preservedAt))}前から保持</span>
                 </div>
               </div>
             ))}

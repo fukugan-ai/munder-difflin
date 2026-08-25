@@ -297,13 +297,12 @@ export const DEFAULT_DROP_HTML = `<style>
       <p class="kicker">Munder Difflin</p>
       <h1 class="big">0.4.4</h1>
       <p class="lede" style="font-size:clamp(1.05rem,2.1vw,1.3rem);margin-top:.5em">
-        The release where Windows finally joined the floor — and the first run
-        stopped quietly failing.
+        Windowsがついにフロアへ加わり、初回起動時の見えない失敗を解消したリリースです。
       </p>
       <div class="stat">
-        <div><b>27</b><span>fixes</span></div>
-        <div><b>4</b><span>new surfaces</span></div>
-        <div><b>1</b><span>platform unbroken</span></div>
+        <div><b>27</b><span>件の修正</span></div>
+        <div><b>4</b><span>つの新画面</span></div>
+        <div><b>1</b><span>環境の復旧</span></div>
       </div>
     </div>
     <div class="nav">
@@ -312,23 +311,22 @@ export const DEFAULT_DROP_HTML = `<style>
         <label class="dot" for="pg3"></label><label class="dot" for="pg4"></label>
         <label class="dot" for="pg5"></label><label class="dot" for="pg6"></label>
       </div>
-      <label class="btn primary" for="pg2">Start &rarr;</label>
+      <label class="btn primary" for="pg2">始める &rarr;</label>
     </div>
   </section>
 
   <section class="page p2">
     <div class="content">
-      <p class="kicker">The headline</p>
-      <h1>Agents can talk to each other on Windows.</h1>
-      <p class="lede">Roughly half of all downloads run on Windows, where
-      agent-to-agent messaging had never worked at all.</p>
-      <div class="placeholder" data-label="Two agents messaging" style="aspect-ratio:24/9"></div>
-      <p class="quote">Every agent booted, rendered, and looked completely healthy.
-      None of them had been told they had an inbox.</p>
-      <p style="margin-top:16px;color:var(--ink-soft);font-size:14px">Any CLI that is
-      not an .exe was launched through cmd.exe, which cuts a multi-line argument at
-      its first newline — taking the protocol block with it. Spawns now launch the
-      real interpreter with an argument array, so the whole prompt survives.</p>
+      <p class="kicker">主な変更</p>
+      <h1>Windowsでもエージェント同士が会話できます。</h1>
+      <p class="lede">ダウンロードの約半数を占めるWindowsで、これまで機能していなかった
+      エージェント間メッセージを修正しました。</p>
+      <div class="placeholder" data-label="メッセージをやり取りする2体のエージェント" style="aspect-ratio:24/9"></div>
+      <p class="quote">すべてのエージェントは起動・描画され、正常に見えていました。
+      しかし受信箱の存在が伝わっていませんでした。</p>
+      <p style="margin-top:16px;color:var(--ink-soft);font-size:14px">.exe以外のCLIを
+      cmd.exe経由で起動すると、複数行引数は最初の改行で切られ、プロトコルブロックも失われていました。
+      実際のインタープリターへ引数配列で渡すことで、プロンプト全体が届くようになりました。</p>
     </div>
     <div class="nav">
       <div class="dots">
@@ -336,29 +334,28 @@ export const DEFAULT_DROP_HTML = `<style>
         <label class="dot" for="pg3"></label><label class="dot" for="pg4"></label>
         <label class="dot" for="pg5"></label><label class="dot" for="pg6"></label>
       </div>
-      <label class="btn" for="pg1">&larr; Back</label>
-      <label class="btn primary" for="pg3">Next &rarr;</label>
+      <label class="btn" for="pg1">&larr; 戻る</label>
+      <label class="btn primary" for="pg3">次へ &rarr;</label>
     </div>
   </section>
 
   <section class="page p3">
     <div class="content">
-      <p class="kicker">The first five minutes</p>
-      <h1>Setup finishes. The floor wakes up.</h1>
-      <p class="lede">Four separate bugs sat on the very first thing a new user does.</p>
+      <p class="kicker">最初の5分</p>
+      <h1>設定が終わると、フロアが動き始めます。</h1>
+      <p class="lede">初めて使う人が最初に触れる場所にあった4件の不具合を修正しました。</p>
       <ul class="rows">
-        <li><i>Wizard</i><div><b>The suggested folder works</b>
-          <p>Accepting ~/HarnessAgents stored a literal tilde and died on ENOENT.
-          It now resolves to a real path — and the field actually suggests it.</p></div></li>
-        <li><i>Wizard</i><div><b>It tells you at step one</b>
-          <p>An empty folder used to walk you through all four steps before bouncing
-          you back. The panel no longer overflows a short screen either.</p></div></li>
-        <li><i>Hive</i><div><b>Services start at setup, not next launch</b>
-          <p>On a fresh install the message router, hooks and telemetry stayed dead
-          until you restarted — so mail never moved and agents never reported.</p></div></li>
-        <li><i>Agents</i><div><b>Restart &amp; Continue has something to resume</b>
-          <p>The live session id is recorded from a second source, so continuing
-          works even when a hook never lands.</p></div></li>
+        <li><i>ウィザード</i><div><b>候補フォルダーをそのまま使えます</b>
+          <p>~/HarnessAgentsを選ぶとチルダが文字のまま保存されENOENTになっていました。
+          今は実際のパスへ解決し、入力欄にも正しく提案します。</p></div></li>
+        <li><i>ウィザード</i><div><b>最初のステップで案内します</b>
+          <p>空のフォルダーでは全4ステップを進んだ後に戻されていました。
+          低い画面でもパネルがはみ出さなくなりました。</p></div></li>
+        <li><i>Hive</i><div><b>次回起動ではなく設定時にサービスを開始</b>
+          <p>新規インストールでは再起動までメッセージルーター、フック、テレメトリーが停止し、
+          メールも状態報告も届きませんでした。</p></div></li>
+        <li><i>エージェント</i><div><b>「再起動して続行」で確実に再開</b>
+          <p>セッションIDを別経路からも記録し、フックが届かなくても会話を再開できます。</p></div></li>
       </ul>
     </div>
     <div class="nav">
@@ -367,40 +364,38 @@ export const DEFAULT_DROP_HTML = `<style>
         <label class="dot on" for="pg3"></label><label class="dot" for="pg4"></label>
         <label class="dot" for="pg5"></label><label class="dot" for="pg6"></label>
       </div>
-      <label class="btn" for="pg2">&larr; Back</label>
-      <label class="btn primary" for="pg4">Next &rarr;</label>
+      <label class="btn" for="pg2">&larr; 戻る</label>
+      <label class="btn primary" for="pg4">次へ &rarr;</label>
     </div>
   </section>
 
   <section class="page p4">
     <div class="content">
-      <p class="kicker">New</p>
-      <h1>Four things that were not here before.</h1>
+      <p class="kicker">新機能</p>
+      <h1>新しく加わった4つの機能。</h1>
       <div class="split">
         <div class="card">
-          <span class="tag">Skills</span>
-          <h2>Every skill your agents can use</h2>
-          <p>What is installed across Claude Code, OpenCode and Codex — and a
-          browsable catalog of 227 more, with search, filters, install and
-          uninstall.</p>
+          <span class="tag">スキル</span>
+          <h2>エージェントが使えるすべてのスキル</h2>
+          <p>Claude Code、OpenCode、Codexへインストール済みのスキルを確認できます。
+          さらに227件のカタログを検索・絞り込みし、導入や削除ができます。</p>
         </div>
         <div class="card">
-          <span class="tag">Prerequisites</span>
-          <h2>Whether you actually have the tools</h2>
-          <p>MemPalace, uv, git and every agent engine, with live status and where
-          each one sits on disk. One button asks Michael to fill in the gaps.</p>
+          <span class="tag">前提ツール</span>
+          <h2>必要なツールが揃っているか確認</h2>
+          <p>MemPalace、uv、git、各エージェントエンジンの状態と保存場所を表示します。
+          不足分はボタンひとつでMichaelへ設定を依頼できます。</p>
         </div>
         <div class="card">
-          <span class="tag">Release drops</span>
-          <h2>This page</h2>
-          <p>Update notes used to be three clipped bullets in the corner. A release
-          can now carry its own designed page, and you are reading the first one.</p>
+          <span class="tag">リリースページ</span>
+          <h2>このページ</h2>
+          <p>隅に切れて表示されていた3件の更新情報を、リリース固有のデザインページで
+          読めるようになりました。これが最初のページです。</p>
         </div>
         <div class="card">
-          <span class="tag">Dark mode</span>
-          <h2>Rebuilt for reading</h2>
-          <p>Every control border measured under 2:1 against its background, so the
-          edges defining them were invisible. Re-tuned and measured, not eyeballed.</p>
+          <span class="tag">ダークモード</span>
+          <h2>読みやすさを再構築</h2>
+          <p>背景とのコントラストが2:1未満だった操作部の境界線を、目測ではなく測定して調整しました。</p>
         </div>
       </div>
     <div class="nav">
@@ -409,31 +404,30 @@ export const DEFAULT_DROP_HTML = `<style>
         <label class="dot" for="pg3"></label><label class="dot on" for="pg4"></label>
         <label class="dot" for="pg5"></label><label class="dot" for="pg6"></label>
       </div>
-      <label class="btn" for="pg3">&larr; Back</label>
-      <label class="btn primary" for="pg5">Next &rarr;</label>
+      <label class="btn" for="pg3">&larr; 戻る</label>
+      <label class="btn primary" for="pg5">次へ &rarr;</label>
     </div>
   </section>
 
   <section class="page p5">
     <div class="content">
-      <p class="kicker">Everything else</p>
-      <h1>The rest of the list.</h1>
+      <p class="kicker">そのほか</p>
+      <h1>そのほかの変更。</h1>
       <ul class="rows">
-        <li><i>Terminal</i><div><b>Copy comes back clean</b>
-          <p>The quote rail is stripped and terminals run in UTF-8, so an em dash
-          survives the trip to another app.</p></div></li>
-        <li><i>Terminal</i><div><b>Dictation pastes what you just said</b></div></li>
-        <li><i>IDE</i><div><b>Images open as images</b>
-          <p>PNG, SVG and embedded screenshots render. The title names the agent.</p></div></li>
-        <li><i>Agents</i><div><b>Restart &amp; Continue revives a dead agent</b></div></li>
-        <li><i>Agents</i><div><b>Grok 4.6 in the model picker</b></div></li>
-        <li><i>Agents</i><div><b>OpenCode runs the model you actually have</b></div></li>
-        <li><i>Board</i><div><b>Task cards stop going missing</b></div></li>
-        <li><i>Hive</i><div><b>A wake nudge survives an odd message id</b></div></li>
-        <li><i>Hive</i><div><b>Compact fires once, not every hour</b></div></li>
-        <li><i>Hive</i><div><b>The cost ledger is out of your git history</b></div></li>
-        <li><i>Office</i><div><b>The floor stops rendering when nobody is looking</b></div></li>
-        <li><i>Layout</i><div><b>Michael sits first on the dock again</b></div></li>
+        <li><i>ターミナル</i><div><b>正しい内容をコピー</b>
+          <p>引用線を除去し、UTF-8で動作するため、ほかのアプリへコピーしてもダッシュなどの文字を保てます。</p></div></li>
+        <li><i>ターミナル</i><div><b>音声入力した内容をそのまま貼り付け</b></div></li>
+        <li><i>IDE</i><div><b>画像を画像として開く</b>
+          <p>PNG、SVG、埋め込みスクリーンショットを表示し、タイトルにエージェント名を示します。</p></div></li>
+        <li><i>エージェント</i><div><b>終了したエージェントも「再起動して続行」で復帰</b></div></li>
+        <li><i>エージェント</i><div><b>モデル選択へGrok 4.6を追加</b></div></li>
+        <li><i>エージェント</i><div><b>OpenCodeで実際に利用可能なモデルを実行</b></div></li>
+        <li><i>ボード</i><div><b>タスクカードが消える問題を修正</b></div></li>
+        <li><i>Hive</i><div><b>特殊なメッセージIDでも起動通知を維持</b></div></li>
+        <li><i>Hive</i><div><b>コンパクト処理を毎時ではなく1回だけ実行</b></div></li>
+        <li><i>Hive</i><div><b>コスト台帳をgit履歴から除外</b></div></li>
+        <li><i>オフィス</i><div><b>見ていない間はフロア描画を停止</b></div></li>
+        <li><i>レイアウト</i><div><b>Michaelを再びドックの先頭へ</b></div></li>
       </ul>
     </div>
     <div class="nav">
@@ -442,20 +436,18 @@ export const DEFAULT_DROP_HTML = `<style>
         <label class="dot" for="pg3"></label><label class="dot" for="pg4"></label>
         <label class="dot on" for="pg5"></label><label class="dot" for="pg6"></label>
       </div>
-      <label class="btn" for="pg4">&larr; Back</label>
-      <label class="btn primary" for="pg6">Next &rarr;</label>
+      <label class="btn" for="pg4">&larr; 戻る</label>
+      <label class="btn primary" for="pg6">次へ &rarr;</label>
     </div>
   </section>
 
   <section class="page p6">
     <div class="content center">
-      <p class="kicker">One last thing</p>
-      <h1 style="font-size:clamp(1.9rem,4.6vw,2.9rem)">Thank you for running this
-      on your own machine.</h1>
-      <p class="lede" style="margin-top:.4em">Every agent here starts on your
-      hardware, in your folders, under your keys. Nothing about that changes.</p>
-      <p class="quote">If it has been useful, a star is the entire marketing budget.
-      The button is just below this page.</p>
+      <p class="kicker">最後に</p>
+      <h1 style="font-size:clamp(1.9rem,4.6vw,2.9rem)">自分のマシンで動かしてくださり、ありがとうございます。</h1>
+      <p class="lede" style="margin-top:.4em">すべてのエージェントは、あなたのハードウェア、フォルダー、キーで動きます。
+      この方針は変わりません。</p>
+      <p class="quote">役に立ったら、スターで応援してもらえるとうれしいです。ボタンはこのページのすぐ下にあります。</p>
     </div>
     <div class="nav">
       <div class="dots">
@@ -463,8 +455,8 @@ export const DEFAULT_DROP_HTML = `<style>
         <label class="dot" for="pg3"></label><label class="dot" for="pg4"></label>
         <label class="dot" for="pg5"></label><label class="dot on" for="pg6"></label>
       </div>
-      <label class="btn" for="pg5">&larr; Back</label>
-      <label class="btn" for="pg1">Start over</label>
+      <label class="btn" for="pg5">&larr; 戻る</label>
+      <label class="btn" for="pg1">最初から</label>
     </div>
   </section>
 

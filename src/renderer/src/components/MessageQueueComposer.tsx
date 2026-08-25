@@ -169,8 +169,8 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
     : block === 'picker'
     ? `held — a slash-command picker is open in ${agent.name}'s terminal`
     : block === 'exited'
-    ? `held — ${agent.name}'s terminal has exited`
-    : `sending to ${agent.name} one-by-one…`;
+    ? `保留中 — ${agent.name}のターミナルは終了しています`
+    : `${agent.name}へ1件ずつ送信中…`;
 
   return (
     <div
@@ -195,7 +195,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
         <span style={{
           fontFamily: 'var(--cth-font-display)', fontSize: 9, lineHeight: '12px',
           color: 'var(--cth-ink-700)', textAlign: 'center'
-        }}>DROP TO ATTACH</span>
+        }}>ドロップして添付</span>
       )}
       {/* Header: label, count, status, clear-all */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -203,7 +203,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
           fontFamily: 'var(--cth-font-display)',
           fontSize: 9, lineHeight: '12px',
           color: 'var(--cth-ink-700)'
-        }}>QUEUE</span>
+        }}>キュー</span>
         {queue.length > 0 && (
           <span style={{
             fontSize: 11, padding: '1px 6px 0',
@@ -215,7 +215,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
         {statusHint && (
           <span
             title={deliveryPaused && !queue[0]?.manual
-              ? 'Auto-delivery is paused for the whole floor. Resume it in the Command Center, or use "send now" on a message below.'
+              ? 'フロア全体の自動配信は一時停止中です。コマンドセンターで再開するか、下のメッセージから「今すぐ送信」を選んでください。'
               : statusHint}
             style={{
               fontSize: 12,
@@ -251,14 +251,14 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
         {queue.length > 1 && (
           <button
             onClick={() => clearQueue(agent.id)}
-            title="Clear all queued messages"
+            title="キューのメッセージをすべて消去"
             style={{
               marginLeft: 'auto', flexShrink: 0, whiteSpace: 'nowrap',
               border: 'none', background: 'transparent', cursor: 'pointer',
               fontFamily: 'var(--cth-font-ui)', fontSize: 12,
               color: 'var(--cth-ink-500)'
             }}
-          >clear all</button>
+          >すべて消去</button>
         )}
       </div>
 
@@ -313,7 +313,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
               }}>{a.name}</span>
               <button
                 onClick={() => removeAttachment(a.path)}
-                title="Remove attachment"
+                title="添付を削除"
                 style={{
                   flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer',
                   color: 'var(--cth-ink-500)', padding: 0,
@@ -367,13 +367,13 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
           <span style={{ flex: 1 }} />
           <PixelButton variant="secondary" size="sm" onClick={pickFiles}>
             <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-              <Icon name="plus" /> files
+              <Icon name="plus" /> ファイル
             </span>
           </PixelButton>
           {freeflowEnabled && <FreeFlowButton agentId={agent.id} hasGroqKey={hasGroqKey} />}
           <PixelButton variant="primary" size="sm" onClick={queueIt} disabled={!canSend}>
             <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-              send <Icon name="arrow-right" />
+              送信 <Icon name="arrow-right" />
             </span>
           </PixelButton>
         </div>
@@ -498,17 +498,17 @@ function QueuedMessageRow(
             {paused && !message.manual && (
               <button
                 onClick={onSendNow}
-                title="Deliver this message even though auto-delivery is paused. It moves to the front of the queue and types in as soon as the terminal is free."
+                title="自動配信が一時停止中でもこのメッセージを送ります。キューの先頭へ移動し、ターミナルが空き次第入力します。"
                 style={{
                   border: 'none', background: 'transparent', cursor: 'pointer', padding: 0,
                   fontFamily: 'var(--cth-font-ui)', fontSize: 12, lineHeight: '16px',
                   color: 'var(--cth-ink-900)', textDecoration: 'underline'
                 }}
-              >send now</button>
+              >今すぐ送信</button>
             )}
             {paused && message.manual && (
               <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-                sending when free…
+                空き次第送信します…
               </span>
             )}
           </div>
@@ -516,7 +516,7 @@ function QueuedMessageRow(
       </div>
       <button
         onClick={onRemove}
-        title="Remove from queue"
+        title="キューから削除"
         style={{
           flexShrink: 0, border: 'none', background: 'transparent',
           cursor: 'pointer',
@@ -637,7 +637,7 @@ function FreeFlowButton({ agentId, hasGroqKey }: { agentId: string; hasGroqKey: 
           <button
             ref={iconRef}
             type="button"
-            aria-label="How do I enable dictation?"
+            aria-label="音声入力を有効にする方法"
             aria-expanded={hintOpen}
             onClick={toggleHint}
             style={{
@@ -668,32 +668,32 @@ function FreeFlowButton({ agentId, hasGroqKey }: { agentId: string; hasGroqKey: 
               <span style={{
                 fontFamily: 'var(--cth-font-display)', fontSize: 9, letterSpacing: 0.5,
                 textTransform: 'uppercase', color: 'var(--cth-ink-500)'
-              }}>Set up dictation</span>
+              }}>音声入力を設定</span>
 
               {/* Lead with the cost, because "add an API key" reads as "this will
                   bill me" and that assumption is what stops people here. */}
               <span>
-                Speak instead of typing. Groq transcribes it, and their free tier
-                covers this — <strong>no card, no cost</strong>.
+                入力する代わりに話すと、Groqが文字に変換します。無料枠で利用でき、
+                <strong>カード登録も料金も不要</strong>です。
               </span>
 
               <ol style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <li>
-                  Create a free key at{' '}
+                  無料キーの作成：{' '}
                   <a
                     href="https://console.groq.com/keys"
                     onClick={(e) => { e.preventDefault(); void window.cth.openExternal('https://console.groq.com/keys'); }}
                     style={{ color: 'var(--cth-ink-900)' }}
                   >console.groq.com/keys</a>
                 </li>
-                <li>Paste it into Settings → Voice → Groq API key</li>
-                <li>Click <strong>voice</strong>, or hold the <strong>right Option</strong> key to talk</li>
+                <li>設定 → 音声 → Groq APIキーへ貼り付ける</li>
+                <li><strong>音声</strong>をクリックするか、<strong>右Option</strong>キーを押して話す</li>
               </ol>
 
               <span style={{ color: 'var(--cth-ink-500)' }}>
-                Hold it ALONE for a moment to start; release to transcribe into
-                the composer, where you can edit before sending. Either Option key
-                works, and Option+key combos still reach the terminal untouched.
+                Optionキーだけを少し長押しすると録音を開始し、離すと入力欄へ文字起こしします。
+                送信前に編集できます。左右どちらのOptionキーでも使え、Optionと別キーの組み合わせは
+                そのままターミナルへ届きます。
               </span>
 
               <button
@@ -705,7 +705,7 @@ function FreeFlowButton({ agentId, hasGroqKey }: { agentId: string; hasGroqKey: 
                   fontFamily: 'var(--cth-font-ui)', fontSize: 11, lineHeight: '15px',
                   color: 'var(--cth-ink-900)', textDecoration: 'underline'
                 }}
-              >set it up now</button>
+              >今すぐ設定</button>
             </div>,
             document.body
           )}

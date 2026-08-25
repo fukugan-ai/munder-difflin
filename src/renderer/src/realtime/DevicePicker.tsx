@@ -87,13 +87,13 @@ export function RealtimeDevicePicker(): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 280 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={labelStyle}>Microphone</span>
+        <span style={labelStyle}>マイク</span>
         <select
           value={deviceId ?? ''}
           onChange={(e) => setDeviceId(e.target.value || null)}
           style={selectStyle}
         >
-          <option value="">System default</option>
+          <option value="">システム既定</option>
           {mics.map((m) => (
             <option key={m.deviceId} value={m.deviceId}>
               {m.label}
@@ -104,13 +104,13 @@ export function RealtimeDevicePicker(): React.ReactElement {
 
       {CAN_PICK_SPEAKER && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={labelStyle}>Speaker</span>
+          <span style={labelStyle}>スピーカー</span>
           <select
             value={outputDeviceId ?? ''}
             onChange={(e) => setOutputDeviceId(e.target.value || null)}
             style={selectStyle}
           >
-            <option value="">System default</option>
+            <option value="">システム既定</option>
             {speakers.map((s) => (
               <option key={s.deviceId} value={s.deviceId}>
                 {s.label}
@@ -122,8 +122,8 @@ export function RealtimeDevicePicker(): React.ReactElement {
 
       {!labelled && (
         <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
-          Device names appear after you first start a voice session and grant mic access.
-          The microphone choice applies the next time Michael connects; the speaker switches live.
+          初めて音声セッションを開始し、マイクへのアクセスを許可するとデバイス名が表示されます。
+          マイクの選択はMichaelの次回接続時、スピーカーは即時に反映されます。
         </span>
       )}
     </div>

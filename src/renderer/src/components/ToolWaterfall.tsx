@@ -37,7 +37,7 @@ export function ToolWaterfall({ agentId }: { agentId: string }) {
             <span style={{ color: 'var(--cth-ink-500)' }}>{fmtTokens(totalTokens(sample))}t total</span>
           </>
         ) : (
-          <span style={{ color: 'var(--cth-ink-500)' }}>no live telemetry yet — spawn / respawn this agent to instrument it</span>
+          <span style={{ color: 'var(--cth-ink-500)' }}>ライブテレメトリはまだありません — 計測するにはこのエージェントを起動／再起動してください</span>
         )}
       </div>
 
@@ -45,7 +45,7 @@ export function ToolWaterfall({ agentId }: { agentId: string }) {
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 10 }}>
         {recent.length === 0 && (
           <div style={{ fontSize: 12, color: 'var(--cth-ink-500)' }}>
-            No tool calls captured yet. Each tool the agent runs appears here with its real duration.
+            ツール呼び出しはまだありません。エージェントが実行した各ツールと実際の所要時間がここに表示されます。
           </div>
         )}
         {recent.map((s, i) => {

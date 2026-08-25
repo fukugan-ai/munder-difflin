@@ -74,11 +74,11 @@ export function ImagePreview({ root, rel, onCopyPath, onViewSource }: ImagePrevi
         </span>
 
         {onViewSource && (
-          <button onClick={onViewSource} title="Open the SVG markup in the editor" style={ideTextBtn}>
-            view source
+          <button onClick={onViewSource} title="SVGマークアップをエディターで開く" style={ideTextBtn}>
+            ソースを表示
           </button>
         )}
-        <button onClick={onCopyPath} title="Copy absolute path" style={ideTextBtn}>copy path</button>
+        <button onClick={onCopyPath} title="絶対パスをコピー" style={ideTextBtn}>パスをコピー</button>
       </div>
 
       <div style={{
@@ -99,11 +99,11 @@ export function ImagePreview({ root, rel, onCopyPath, onViewSource }: ImagePrevi
         backgroundSize: '16px 16px',
         backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0px'
       }}>
-        {img.status === 'loading' && <Centered>loading image…</Centered>}
+        {img.status === 'loading' && <Centered>画像を読み込み中…</Centered>}
         {img.status === 'error' && <Centered tone="error">{img.error}</Centered>}
         {img.status === 'ready' && decodeFailed && (
           <Centered tone="error">
-            could not decode this image — the file may be corrupt or misnamed
+            画像をデコードできませんでした。ファイルが破損しているか、拡張子が正しくない可能性があります
           </Centered>
         )}
         {img.status === 'ready' && !decodeFailed && (
