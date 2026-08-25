@@ -113,12 +113,11 @@ fn nav(route: AppRoute, label: &'static str, icon: &'static str, enabled: bool) 
 fn Office() -> Element {
     let config = use_resource(config_get);
     let navigator = use_navigator();
-    let should_redirect = matches!(
-        config.read().as_ref(),
-        Some(Ok(config)) if config.requires_onboarding()
-    );
     use_effect(move || {
-        if should_redirect {
+        if matches!(
+            config.read().as_ref(),
+            Some(Ok(config)) if config.requires_onboarding()
+        ) {
             navigator.replace(AppRoute::Onboarding {});
         }
     });
