@@ -1,0 +1,19 @@
+[package]
+name = "md-web-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+dioxus.workspace = true
+md-web-contracts.workspace = true
+md-web-services = { workspace = true, optional = true }
+
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+server = ["dioxus/server", "dep:md-web-services"]
+
+[lints]
+workspace = true

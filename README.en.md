@@ -61,6 +61,7 @@ visualized as avatars at work on a shared office floor.
 - [How it works](#how-it-works)
 - [Features](#features)
 - [Getting started](#getting-started)
+- [Dioxus Web preview](#dioxus-web-preview)
 - [Architecture](#architecture)
 - [Project structure](#project-structure)
 - [Design system](#design-system)
@@ -209,6 +210,43 @@ npm run typecheck  # type-check the node (main/preload) and web (renderer) proje
 ```
 
 If `node-pty` fails to load after an Electron upgrade, re-run `npm install`.
+
+## Dioxus Web preview
+
+The `feat/dioxus-web` branch contains the first slice of a local single-user Web app for headless WSL.
+Its default bind address is `127.0.0.1:8080` inside WSL.
+Once running, it opens from the Windows browser at `http://localhost:8080` without launching the Electron UI or requiring an X server.
+
+This preview uses [Dioxus](https://dioxuslabs.com/) 0.7.10 with Rust and WebAssembly.
+It requires Rust and Cargo 1.98 plus the `wasm32-unknown-unknown` target.
+
+```bash
+git switch feat/dioxus-web
+npm run check:web
+```
+
+Install the pinned `dx` CLI inside the repository under `.task-tools/`; no global install is required.
+
+```bash
+cargo install dioxus-cli --version 0.7.10 --locked --root .task-tools/dioxus
+npm run dev:web
+```
+
+This command has been verified to build and start the fullstack server and client. Once running, `GET /api/health` returns the JSON health snapshot.
+Open this URL in the Windows browser:
+
+```text
+http://localhost:8080
+```
+
+The current migration slice provides only the Japanese dashboard and Web server/PostgreSQL status.
+The Electron agent, PTY, filesystem, git, GitHub, task, and other features have not yet been ported to the Web app.
+The Web preview does not have full feature parity; continue to use the Electron app for those features.
+
+Only the server process started by `npm run dev:web` reads the PostgreSQL `MD_PG_*` environment variables.
+Do not pass those credentials to WASM or the browser.
+If configuration is missing, the Web app starts in degraded mode and reports durable writes as disabled (`writes: false`).
+The dashboard and status view remain available in that state.
 
 ### Prepare PostgreSQL
 

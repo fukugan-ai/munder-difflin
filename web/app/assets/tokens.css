@@ -1,0 +1,161 @@
+/* Hallmark · preservation: Dunder Mifflin desktop tokens · pre-emit critique: P5 H4 E5 S5 R5 V3 */
+:root {
+  --color-cream-50: #fffdf5;
+  --color-cream-100: #fff8e7;
+  --color-cream-200: #f4e9c7;
+  --color-cream-300: #e8d9a0;
+  --color-paper-100: #fcfaf0;
+  --color-paper-200: #f0ead2;
+  --color-ink-900: #1a1320;
+  --color-ink-700: #3d2e4a;
+  --color-ink-500: #6b5878;
+  --color-ink-300: #a899b5;
+  --color-ink-100: #d9cfe0;
+  --color-coral: #d96a62;
+  --color-coral-light: #f3d3cd;
+  --color-mint: #5ca97a;
+  --color-mint-light: #d2e7da;
+  --color-sky: #4f9faf;
+  --color-sky-light: #cfe5e9;
+  --color-lemon: #dcab3c;
+  --color-lemon-light: #f3e4bc;
+  --color-lilac: #9482d3;
+  --color-lilac-light: #e0daf2;
+  --color-accent-ink: #1a1320;
+  --color-shadow: rgb(26 19 32 / 14%);
+  --color-focus: #3d2e4a;
+
+  --font-display: "Press Start 2P", ui-monospace, monospace;
+  --font-ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --text-display: 0.75rem;
+  --text-body-sm: 0.875rem;
+  --text-body: 1rem;
+  --text-body-lg: 1rem;
+  --text-title: clamp(1.375rem, 3vw, 2rem);
+  --line-display: 1.25rem;
+  --line-body: 1.5;
+
+  --rule-hairline: 0.0625rem;
+  --rule-strong: 0.125rem;
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-round: 999rem;
+  --shadow-hard: 0.1875rem 0.1875rem 0 var(--color-shadow);
+  --focus-width: 0.125rem;
+  --focus-offset: 0.125rem;
+
+  --sidebar-width: 12.5rem;
+  --header-height: 3.5rem;
+  --content-max: 92rem;
+  --control-height: 2.75rem;
+  --badge-dot: 0.5rem;
+  --office-min-height: 32rem;
+  --office-grid: 2rem;
+  --office-window-width: 9rem;
+  --office-window-height: 5.5rem;
+  --office-desk-width: 8rem;
+  --office-desk-height: 3rem;
+  --office-plant-size: 3rem;
+  --skeleton-width: 8rem;
+  --opacity-disabled: 0.58;
+  --opacity-muted: 0.62;
+  --opacity-loading: 0.72;
+  --opacity-pulse-start: 0.45;
+  --line-heading: 1.2;
+
+  --dur-fast: 90ms;
+  --dur-calm: 140ms;
+  --dur-pulse: 1000ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-cream-50: #17171b;
+    --color-cream-100: #1d1d22;
+    --color-cream-200: #26262c;
+    --color-cream-300: #313139;
+    --color-paper-100: #1a1a1f;
+    --color-paper-200: #222229;
+    --color-ink-900: #dedbd6;
+    --color-ink-700: #b3b0ac;
+    --color-ink-500: #96919f;
+    --color-ink-300: #787684;
+    --color-ink-100: #3e3d46;
+    --color-coral: #e08c82;
+    --color-coral-light: #3b2724;
+    --color-mint: #74c096;
+    --color-mint-light: #1e3227;
+    --color-sky: #6fb3c4;
+    --color-sky-light: #1f3238;
+    --color-lemon: #cfaa57;
+    --color-lemon-light: #332c1d;
+    --color-lilac: #a896e3;
+    --color-lilac-light: #2b2740;
+    --color-shadow: rgb(0 0 0 / 45%);
+    --color-focus: #dedbd6;
+  }
+}
+
+.app-shell[data-theme="light"] {
+  --color-cream-50: #fffdf5;
+  --color-cream-100: #fff8e7;
+  --color-cream-200: #f4e9c7;
+  --color-cream-300: #e8d9a0;
+  --color-paper-100: #fcfaf0;
+  --color-paper-200: #f0ead2;
+  --color-ink-900: #1a1320;
+  --color-ink-700: #3d2e4a;
+  --color-ink-500: #6b5878;
+  --color-ink-300: #a899b5;
+  --color-ink-100: #d9cfe0;
+  --color-coral: #d96a62;
+  --color-coral-light: #f3d3cd;
+  --color-mint: #5ca97a;
+  --color-mint-light: #d2e7da;
+  --color-sky: #4f9faf;
+  --color-sky-light: #cfe5e9;
+  --color-lemon: #dcab3c;
+  --color-lemon-light: #f3e4bc;
+  --color-lilac: #9482d3;
+  --color-lilac-light: #e0daf2;
+  --color-accent-ink: #1a1320;
+}
+
+.app-shell[data-theme="dark"] {
+  --color-cream-50: #17171b;
+  --color-cream-100: #1d1d22;
+  --color-cream-200: #26262c;
+  --color-cream-300: #313139;
+  --color-paper-100: #1a1a1f;
+  --color-paper-200: #222229;
+  --color-ink-900: #dedbd6;
+  --color-ink-700: #b3b0ac;
+  --color-ink-500: #96919f;
+  --color-ink-300: #787684;
+  --color-ink-100: #3e3d46;
+  --color-coral: #e08c82;
+  --color-coral-light: #3b2724;
+  --color-mint: #74c096;
+  --color-mint-light: #1e3227;
+  --color-sky: #6fb3c4;
+  --color-sky-light: #1f3238;
+  --color-lemon: #cfaa57;
+  --color-lemon-light: #332c1d;
+  --color-lilac: #a896e3;
+  --color-lilac-light: #2b2740;
+  --color-accent-ink: #1a1320;
+}

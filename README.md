@@ -54,6 +54,7 @@
 - [どんな課題を減らすか](#どんな課題を減らすか)
 - [向いている場面](#向いている場面)
 - [最短で試す](#最短で試す)
+- [Dioxus Web版のプレビュー](#dioxus-web版のプレビュー)
 - [仕組み](#仕組み)
 - [主な機能](#主な機能)
 - [v0.4.5の状態と制限](#v045の状態と制限)
@@ -144,6 +145,43 @@ npm run typecheck  # main/preloadとrendererを型検査
 ```
 
 Electronの更新後に`node-pty`を読み込めない場合は、`npm install`を再実行してください。
+
+## Dioxus Web版のプレビュー
+
+`feat/dioxus-web`ブランチには、headless WSLで使うローカル単独利用向けWeb版の最初のスライスがあります。
+既定の待受先はWSL内の`127.0.0.1:8080`です。
+起動できれば、Windowsのブラウザーから`http://localhost:8080`を開けるため、Electronの画面とXサーバーは不要です。
+
+このプレビューはRustとWebAssemblyで動く[Dioxus](https://dioxuslabs.com/) 0.7.10を使います。
+RustとCargo 1.98、および`wasm32-unknown-unknown` targetが必要です。
+
+```bash
+git switch feat/dioxus-web
+npm run check:web
+```
+
+`dx` CLIはrepository内の`.task-tools/`へ固定versionで導入します。global installは不要です。
+
+```bash
+cargo install dioxus-cli --version 0.7.10 --locked --root .task-tools/dioxus
+npm run dev:web
+```
+
+このcommandでfullstackのserver/client buildと起動を確認済みです。起動後、`GET /api/health`はJSONのhealth snapshotを返します。
+Windowsのブラウザーで次のURLを開きます。
+
+```text
+http://localhost:8080
+```
+
+現在の移植スライスで使えるのは、日本語のdashboardとWebサーバーおよびPostgreSQLの状態表示です。
+Electron版のエージェント、PTY、ファイル、git、GitHub、タスクなどの機能は、まだWeb版へ移植されていません。
+完全な機能互換ではないため、これらの機能には引き続きElectron版を使います。
+
+PostgreSQLの`MD_PG_*`環境変数は、`npm run dev:web`が起動するserver processだけが読みます。
+WASMとブラウザーへ認証情報を渡さないでください。
+設定が不足している場合、Web版はdegraded状態で起動し、永続化writeは無効（`writes: false`）として表示されます。
+この状態でもdashboardとstatusは確認できます。
 
 ### PostgreSQLの準備
 

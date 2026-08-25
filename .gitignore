@@ -9,6 +9,11 @@ dist/
 .env.local
 .env.signing
 .gstack/
+.codex-task/
+.task-cache/
+.task-tools/
+web/target/
+web/dist/
 
 # signing / notarization secrets — NEVER commit these
 *.p8

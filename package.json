@@ -15,6 +15,7 @@
   },
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:web": "cd web && ../.task-tools/dioxus/bin/dx serve --web --fullstack true -p md-web-app --addr 127.0.0.1 --port 8080 --open false --cargo-args=--locked",
     "build": "electron-vite build && npm run copy:main-assets",
     "copy:main-assets": "node tools/copy-main-assets.cjs",
     "preview": "electron-vite preview",
@@ -22,7 +23,9 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "check:web": "cargo check --manifest-path web/Cargo.toml -p md-web-app --no-default-features --features server --locked && cargo check --manifest-path web/Cargo.toml -p md-web-app --no-default-features --features web --target wasm32-unknown-unknown --locked",
     "test:focused": "node --test test/*.test.cjs",
+    "test:web": "cargo test --manifest-path web/Cargo.toml --workspace --locked",
     "check:links": "node tools/check-release-links.cjs",
     "dist": "npm run build && electron-builder",
     "dist:mac": "npm run build && electron-builder --mac",
