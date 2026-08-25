@@ -56,7 +56,7 @@ async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnErro
         .find(|part| !part.is_empty())
         .unwrap_or("workspace")
         .to_owned();
-    let source_workspace_id = selected_source_workspace_id(receipt)?;
+    let workspace_authority = recovery_workspace_authority(receipt)?;
     let team = [
         TeamMember::aria(),
         TeamMember::implementer(),
@@ -69,7 +69,7 @@ async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnErro
             .await
             .map_err(|_| safe_error())?;
         let state =
-            classify_persisted_member(persisted.as_ref(), &request.process, &source_workspace_id)?;
+            classify_persisted_member(persisted.as_ref(), &request.process, &workspace_authority)?;
         let previous_revision = persisted.as_ref().map(|value| value.revision);
         match state {
             PersistedMemberState::Missing => {
@@ -83,7 +83,7 @@ async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnErro
                     &repository,
                     member.process_id,
                     &request.process,
-                    &source_workspace_id,
+                    &workspace_authority,
                     previous_revision,
                 )
                 .await?;
@@ -101,7 +101,7 @@ async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnErro
                     &repository,
                     member.process_id,
                     &request.process,
-                    &source_workspace_id,
+                    &workspace_authority,
                     previous_revision,
                 )
                 .await?;
@@ -132,36 +132,72 @@ enum PersistedMemberState {
 }
 
 #[cfg(feature = "server")]
-fn selected_source_workspace_id(
+struct RecoveryWorkspaceAuthority {
+    source_paths: Vec<std::path::PathBuf>,
+    source_workspace_id: md_web_contracts::domains::fs_git_ide::WorkspaceId,
+    private_root: md_web_services::domains::fs_git_ide::PrivateWorkspaceRoot,
+}
+
+#[cfg(feature = "server")]
+fn recovery_workspace_authority(
     receipt: &FinishOnboardingResult,
-) -> Result<md_web_contracts::domains::fs_git_ide::WorkspaceId, ServerFnError> {
+) -> Result<RecoveryWorkspaceAuthority, ServerFnError> {
+    let mut source_paths = std::env::var_os("MD_REGISTERED_REPOS")
+        .map(|value| std::env::split_paths(&value).collect::<Vec<_>>())
+        .unwrap_or_default();
+    if source_paths.is_empty() {
+        source_paths.extend(
+            receipt
+                .config
+                .registered_repos
+                .iter()
+                .map(std::path::PathBuf::from),
+        );
+    }
     let registry = md_web_services::domains::fs_git_ide::WorkspaceRegistry::from_source_paths(
-        receipt
-            .config
-            .registered_repos
-            .iter()
-            .map(std::path::PathBuf::from),
+        source_paths.clone(),
     );
-    registry
+    let source_workspace_id = registry
         .list()
         .into_iter()
         .find(|workspace| workspace.display_path == receipt.aria.cwd)
         .map(|workspace| workspace.id)
-        .ok_or_else(safe_error)
+        .ok_or_else(safe_error)?;
+    let harness_home = std::env::var_os("MD_HARNESS_HOME")
+        .map(std::path::PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .or_else(|| {
+            receipt
+                .config
+                .harness_home
+                .as_ref()
+                .map(std::path::PathBuf::from)
+        })
+        .filter(|path| path.is_absolute())
+        .ok_or_else(safe_error)?;
+    let private_root = md_web_services::domains::fs_git_ide::PrivateWorkspaceRoot::new(
+        harness_home.join("worktrees"),
+    )
+    .map_err(|_| safe_error())?;
+    Ok(RecoveryWorkspaceAuthority {
+        source_paths,
+        source_workspace_id,
+        private_root,
+    })
 }
 
 #[cfg(feature = "server")]
 fn classify_persisted_member(
     persisted: Option<&md_web_contracts::domains::persistence::PersistedFloorAgent>,
     expected: &md_web_contracts::domains::pty_agents::SpawnAgentRequest,
-    source_workspace_id: &md_web_contracts::domains::fs_git_ide::WorkspaceId,
+    workspace_authority: &RecoveryWorkspaceAuthority,
 ) -> Result<PersistedMemberState, ServerFnError> {
     use md_web_contracts::domains::pty_agents::AgentStatus;
 
     let Some(persisted) = persisted else {
         return Ok(PersistedMemberState::Missing);
     };
-    if !persisted_member_matches(&persisted.agent, expected, source_workspace_id) {
+    if !persisted_member_matches(&persisted.agent, expected, workspace_authority) {
         return Err(ServerFnError::new(
             "保存済みの初期チームが現在の設定と一致しません。設定を確認してください。",
         ));
@@ -189,11 +225,24 @@ fn classify_persisted_member(
 fn persisted_member_matches(
     record: &md_web_contracts::domains::pty_agents::AgentRecord,
     expected: &md_web_contracts::domains::pty_agents::SpawnAgentRequest,
-    source_workspace_id: &md_web_contracts::domains::fs_git_ide::WorkspaceId,
+    workspace_authority: &RecoveryWorkspaceAuthority,
 ) -> bool {
+    use md_web_contracts::domains::fs_git_ide::WorkspaceCapability;
+
     let Some(capability) = record.workspace_capability.as_ref() else {
         return false;
     };
+    let admitted = md_web_services::domains::fs_git_ide::WorkspaceRegistry::from_source_paths(
+        workspace_authority.source_paths.clone(),
+    )
+    .with_private_workspaces(&workspace_authority.private_root, [capability.clone()])
+    .list()
+    .into_iter()
+    .any(|workspace| {
+        workspace.id == capability.workspace_id
+            && workspace.capability == WorkspaceCapability::PrivateMutable
+            && workspace.display_path == capability.path
+    });
     record.id == expected.id
         && record.name == expected.name
         && record.provider == expected.provider
@@ -202,7 +251,8 @@ fn persisted_member_matches(
         && record.command == expected.command
         && record.args == expected.args
         && record.model == expected.model
-        && capability.source_workspace_id == *source_workspace_id
+        && capability.source_workspace_id == workspace_authority.source_workspace_id
+        && admitted
         && capability.path == record.cwd
         && record.worktree_path.as_deref() == Some(capability.path.as_str())
 }
@@ -212,7 +262,7 @@ async fn verify_transition_postcondition(
     repository: &md_web_services::domains::persistence::PgPersistenceRepository,
     agent_id: &str,
     expected: &md_web_contracts::domains::pty_agents::SpawnAgentRequest,
-    source_workspace_id: &md_web_contracts::domains::fs_git_ide::WorkspaceId,
+    workspace_authority: &RecoveryWorkspaceAuthority,
     previous_revision: Option<i64>,
 ) -> Result<(), ServerFnError> {
     let current = repository
@@ -220,7 +270,7 @@ async fn verify_transition_postcondition(
         .await
         .map_err(|_| safe_error())?
         .ok_or_else(safe_error)?;
-    let is_active = classify_persisted_member(Some(&current), expected, source_workspace_id)
+    let is_active = classify_persisted_member(Some(&current), expected, workspace_authority)
         .is_ok_and(|state| state == PersistedMemberState::Active);
     let revision_advanced = previous_revision.is_none_or(|revision| current.revision > revision);
     if is_active && revision_advanced {
@@ -406,6 +456,10 @@ fn safe_error() -> ServerFnError {
 
 #[cfg(all(test, feature = "server"))]
 mod tests {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use md_web_contracts::domains::config_onboarding::{RoleSkillAssignment, TeamRole};
     use md_web_contracts::domains::fs_git_ide::{PrivateWorkspaceCapability, WorkspaceId};
     use md_web_contracts::domains::memory_skills::{LocalSkill, SkillProvider, SkillScope};
@@ -414,7 +468,45 @@ mod tests {
         AgentProvider, AgentRecord, AgentRole, AgentStatus, SpawnAgentRequest,
     };
 
-    use super::{PersistedMemberState, classify_persisted_member, runtime_skill_assignments};
+    use super::{
+        PersistedMemberState, RecoveryWorkspaceAuthority, classify_persisted_member,
+        runtime_skill_assignments,
+    };
+
+    struct TestAuthority {
+        root: PathBuf,
+        recovery: RecoveryWorkspaceAuthority,
+    }
+
+    impl Drop for TestAuthority {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.root);
+        }
+    }
+
+    fn test_authority() -> Result<TestAuthority, Box<dyn std::error::Error>> {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |duration| duration.as_nanos());
+        let root = std::env::temp_dir().join(format!(
+            "md-team-private-authority-{}-{nonce}",
+            std::process::id()
+        ));
+        let source = root.join("source");
+        let private = root.join("harness/worktrees");
+        fs::create_dir_all(&source)?;
+        fs::create_dir_all(&private)?;
+        Ok(TestAuthority {
+            root,
+            recovery: RecoveryWorkspaceAuthority {
+                source_paths: vec![source],
+                source_workspace_id: WorkspaceId(String::from("source-1")),
+                private_root: md_web_services::domains::fs_git_ide::PrivateWorkspaceRoot::new(
+                    private,
+                )?,
+            },
+        })
+    }
 
     fn skill(name: &str) -> LocalSkill {
         LocalSkill {
@@ -483,10 +575,13 @@ mod tests {
         request: &SpawnAgentRequest,
         revision: i64,
         status: AgentStatus,
-    ) -> PersistedFloorAgent {
+        authority: &RecoveryWorkspaceAuthority,
+    ) -> Result<PersistedFloorAgent, Box<dyn std::error::Error>> {
         let capability_id = format!("wt-{}", request.id);
-        let private_path = format!("/harness/workspaces/{capability_id}");
-        PersistedFloorAgent {
+        let private_path = authority.private_root.path().join(&capability_id);
+        fs::create_dir_all(&private_path)?;
+        let private_path = private_path.to_string_lossy().into_owned();
+        Ok(PersistedFloorAgent {
             floor_id: String::from("local"),
             revision,
             agent: AgentRecord {
@@ -514,27 +609,40 @@ mod tests {
                 archived: status == AgentStatus::Archived,
             },
             updated_at_ms: 0,
-        }
+        })
     }
 
     #[test]
-    fn partial_archived_team_recovery_plan_is_idempotent() {
-        let source = WorkspaceId(String::from("source-1"));
+    fn partial_archived_team_recovery_plan_is_idempotent() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let authority = test_authority()?;
         let requests = [
             spawn_request("god", "Aria", true),
             spawn_request("implementer", "Implementer", false),
             spawn_request("verifier", "Verifier", false),
         ];
         let partial = [
-            Some(persisted(&requests[0], 2, AgentStatus::Archived)),
-            Some(persisted(&requests[1], 2, AgentStatus::Archived)),
+            Some(persisted(
+                &requests[0],
+                2,
+                AgentStatus::Archived,
+                &authority.recovery,
+            )?),
+            Some(persisted(
+                &requests[1],
+                2,
+                AgentStatus::Archived,
+                &authority.recovery,
+            )?),
             None,
         ];
 
         let initial = requests
             .iter()
             .zip(&partial)
-            .map(|(request, record)| classify_persisted_member(record.as_ref(), request, &source))
+            .map(|(request, record)| {
+                classify_persisted_member(record.as_ref(), request, &authority.recovery)
+            })
             .collect::<Result<Vec<_>, _>>();
 
         assert_eq!(
@@ -547,14 +655,16 @@ mod tests {
         );
 
         let completed = [
-            persisted(&requests[0], 3, AgentStatus::Idle),
-            persisted(&requests[1], 3, AgentStatus::Idle),
-            persisted(&requests[2], 1, AgentStatus::Idle),
+            persisted(&requests[0], 3, AgentStatus::Idle, &authority.recovery)?,
+            persisted(&requests[1], 3, AgentStatus::Idle, &authority.recovery)?,
+            persisted(&requests[2], 1, AgentStatus::Idle, &authority.recovery)?,
         ];
         let duplicate_retry = requests
             .iter()
             .zip(&completed)
-            .map(|(request, record)| classify_persisted_member(Some(record), request, &source))
+            .map(|(request, record)| {
+                classify_persisted_member(Some(record), request, &authority.recovery)
+            })
             .collect::<Result<Vec<_>, _>>();
 
         assert_eq!(
@@ -562,20 +672,51 @@ mod tests {
             Some(vec![PersistedMemberState::Active; 3])
         );
         assert_eq!(completed.map(|record| record.revision), [3, 3, 1]);
+        Ok(())
     }
 
     #[test]
-    fn archived_member_with_wrong_source_capability_is_rejected() {
+    fn invalid_private_capability_identity_path_and_root_are_rejected()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let authority = test_authority()?;
         let request = spawn_request("god", "Aria", true);
-        let record = persisted(&request, 2, AgentStatus::Archived);
+        let valid = persisted(&request, 2, AgentStatus::Archived, &authority.recovery)?;
+
+        assert_eq!(
+            classify_persisted_member(Some(&valid), &request, &authority.recovery).ok(),
+            Some(PersistedMemberState::Archived)
+        );
+
+        let mut wrong_identity = valid.clone();
+        if let Some(capability) = wrong_identity.agent.workspace_capability.as_mut() {
+            capability.workspace_id = WorkspaceId(String::from("private-wrong"));
+        }
+        assert!(
+            classify_persisted_member(Some(&wrong_identity), &request, &authority.recovery)
+                .is_err()
+        );
+
+        let mut wrong_leaf = valid.clone();
+        if let Some(capability) = wrong_leaf.agent.workspace_capability.as_mut() {
+            capability.id = String::from("different-leaf");
+        }
+        assert!(
+            classify_persisted_member(Some(&wrong_leaf), &request, &authority.recovery).is_err()
+        );
+
+        let outside = authority.root.join("outside/wt-god");
+        fs::create_dir_all(&outside)?;
+        let outside = outside.to_string_lossy().into_owned();
+        let mut wrong_root = valid;
+        wrong_root.agent.cwd.clone_from(&outside);
+        wrong_root.agent.worktree_path = Some(outside.clone());
+        if let Some(capability) = wrong_root.agent.workspace_capability.as_mut() {
+            capability.path = outside;
+        }
 
         assert!(
-            classify_persisted_member(
-                Some(&record),
-                &request,
-                &WorkspaceId(String::from("source-2"))
-            )
-            .is_err()
+            classify_persisted_member(Some(&wrong_root), &request, &authority.recovery).is_err()
         );
+        Ok(())
     }
 }
