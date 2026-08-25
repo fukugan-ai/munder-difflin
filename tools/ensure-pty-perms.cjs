@@ -12,7 +12,7 @@
  * In some installs the helper shipped inside `prebuilds/` lands with mode 644 (no
  * execute bit). When that's the copy node-pty loads, `pty.fork` fails with
  * "posix_spawnp failed" on EVERY spawn — so no PTY (and therefore no agent) can
- * start. `electron-rebuild` produces a correct copy under `bin/<runtime>-<abi>/`,
+ * start. node-pty provides an ABI-specific copy under `bin/<runtime>-<abi>/`,
  * but node-pty's loader never looks there, so it falls back to the prebuild.
  *
  * This restores +x on every spawn-helper we can find so whichever one node-pty

@@ -510,9 +510,9 @@ export interface TelemetrySnapshot {
   spans: Record<string, ToolSpan[]>;
 }
 
-/** One captured user prompt from the SQLite command_history table. */
+/** One captured user prompt from PostgreSQL command_history. */
 export interface CommandHistoryEntry {
-  id: number;
+  id: string;
   agentId: string;
   cwd: string | null;
   text: string;
@@ -830,7 +830,12 @@ const api = {
     { ok: true; file: { path: string; name: string } } | { ok: false; error: string }
   > => ipcRenderer.invoke('clipboard:saveImage'),
 
-  // ─── Command history (SQLite — every prompt submitted to an agent) ─────────
+  // ─── PostgreSQL status + command history ───────────────────────────────────
+  persistenceStatus: (): Promise<
+    { state: 'closed' } |
+    { state: 'ready'; writes: true } |
+    { state: 'degraded'; writes: false; code: string }
+  > => ipcRenderer.invoke('db:status'),
   /** Record one submitted prompt. Fire-and-forget from the prompt-detection hook. */
   historyAdd: (entry: { agentId: string; cwd?: string; text: string }): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('history:add', entry),

@@ -192,7 +192,8 @@ terminal/event plane, and [`DESIGN.md`](./DESIGN.md) for the visual system.
 ```bash
 git clone https://github.com/chaitanyagiri/munder-difflin.git
 cd munder-difflin
-npm install        # postinstall rebuilds node-pty against Electron's ABI
+npm install        # install dependencies
+# complete "Prepare PostgreSQL" below
 npm run dev        # launches the Electron app with hot reload
 ```
 
@@ -207,8 +208,45 @@ npm run preview    # preview the production build
 npm run typecheck  # type-check the node (main/preload) and web (renderer) projects
 ```
 
-> If `node-pty` fails to load after an Electron upgrade, re-run `npm install` (the `postinstall` hook
-> runs `electron-rebuild` against the current Electron ABI).
+If `node-pty` fails to load after an Electron upgrade, re-run `npm install`.
+
+### Prepare PostgreSQL
+
+PostgreSQL is required for durable window state, command history, and cost accounting.
+There is no SQLite fallback or dual-write mode.
+
+```bash
+export MD_PG_HOST='localhost'
+export MD_PG_PORT='5432'
+export MD_PG_DATABASE='munder_difflin'
+export MD_PG_USER='munder_migrator'
+export MD_PG_PASSWORD='<migration-role-password>'
+export MD_PG_NAMESPACE='my-floor'
+npm run db:migrate
+
+export MD_PG_USER='munder_runtime'
+export MD_PG_PASSWORD='<runtime-role-password>'
+npm run dev
+```
+
+`MD_PG_NAMESPACE` separates one operator's durable state.
+Two app instances cannot hold the same namespace concurrently.
+Grant the runtime role usage on the schema and identity sequences, plus `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on existing tables, but no DDL privileges.
+
+Remote hosts require `MD_PG_TLS_CA`, pointing to a CA file that validates the server certificate.
+Missing configuration, an unreachable server, or a schema-version mismatch starts the app in degraded mode: default window placement, empty history, and rejected durable writes.
+Correct the configuration, run `npm run db:migrate` as the migration owner, and restart the app.
+
+Legacy sources can be imported once without modifying them:
+
+```bash
+npm run db:import -- --source-id legacy-2026-08 --sqlite /path/to/harness.db
+npm run db:import -- --source-id legacy-cost-2026-08 --cost-jsonl /path/to/cost-ledger.jsonl
+```
+
+Keep `--source-id` stable when resuming or rerunning the same backup.
+SQLite import requires Node.js 22 or newer.
+Import proceeds only while the app is not holding that namespace, stops before writes on invalid rows, and never renames, deletes, or overwrites the source.
 
 ## Architecture
 
@@ -261,7 +299,7 @@ src/
     usage.ts / pricing.ts    UsageProvider seam + per-model cost attribution
     breaker.ts / control.ts  cost/runaway circuit breaker (steer/constrain/stop) + HITL gate / steer / stop
     reflect.ts               MemoryReflector — memory condensation
-    db.ts                    SQLite durable store (window bounds + history) + durable cost ledger
+    db.ts                    PostgreSQL durable store for window state, history, and cost ledger
     github.ts                GitHub issue + CI run ingestion via the gh CLI
     shellEnv.ts              resolve PATH and shell env for child processes
     fs.ts / git.ts           sandboxed filesystem + git bridges

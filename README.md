@@ -115,7 +115,8 @@ Munder Difflinは、実際のターミナルプロセスをそのまま使いな
 ```bash
 git clone https://github.com/chaitanyagiri/munder-difflin.git
 cd munder-difflin
-npm install        # ElectronのABIに合わせてnode-ptyを再ビルド
+npm install        # 依存関係を導入
+# 次の「PostgreSQLの準備」を完了する
 npm run dev        # ホットリロード付きでElectronアプリを起動
 ```
 
@@ -143,7 +144,46 @@ npm run typecheck  # main/preloadとrendererを型検査
 ```
 
 Electronの更新後に`node-pty`を読み込めない場合は、`npm install`を再実行してください。
-`postinstall`が現在のElectron ABIに合わせて`electron-rebuild`を実行します。
+
+### PostgreSQLの準備
+
+window状態、コマンド履歴、cost台帳の永続化にはPostgreSQLが必要です。
+SQLiteへのfallbackや二重書きはありません。
+
+```bash
+export MD_PG_HOST='localhost'
+export MD_PG_PORT='5432'
+export MD_PG_DATABASE='munder_difflin'
+export MD_PG_USER='munder_migrator'
+export MD_PG_PASSWORD='<migration-role-password>'
+export MD_PG_NAMESPACE='my-floor'
+npm run db:migrate
+
+export MD_PG_USER='munder_runtime'
+export MD_PG_PASSWORD='<runtime-role-password>'
+npm run dev
+```
+
+`MD_PG_NAMESPACE`は1人のoperatorの保存領域を区別します。
+同じnamespaceを2つのアプリから同時に開くことはできません。
+runtime roleには`munder_difflin` schemaとidentity sequenceの利用、既存tableへの`SELECT`、`INSERT`、`UPDATE`、`DELETE`だけを付与し、DDL権限は付与しないでください。
+
+localhost以外へ接続するときは、server証明書を検証するCA fileを`MD_PG_TLS_CA`で指定する必要があります。
+設定不足、接続不能、schema version不一致ではアプリはdegraded状態で起動します。
+windowは既定位置で開き、履歴は空、永続化writeは拒否されます。
+設定を直し、`npm run db:migrate`をmigration ownerで実行してからアプリを再起動してください。
+
+旧データはsourceを変更せず、一度だけimportできます。
+
+```bash
+npm run db:import -- --source-id legacy-2026-08 --sqlite /path/to/harness.db
+npm run db:import -- --source-id legacy-cost-2026-08 --cost-jsonl /path/to/cost-ledger.jsonl
+```
+
+`--source-id`は同じbackupを再開または再実行するときに変えないでください。
+SQLite importにはNode.js 22以降が必要です。
+importは同じnamespaceのアプリが停止しているときだけ進み、不正な行があればwrite前に停止します。
+source fileをrename、削除、上書きしません。
 
 ## 仕組み
 
@@ -294,7 +334,7 @@ src/
     usage.ts / pricing.ts    UsageProviderとmodel別cost
     breaker.ts / control.ts  サーキットブレーカーと人の確認、指示、停止
     reflect.ts               記憶の圧縮
-    db.ts                    SQLiteによるwindow、履歴、cost台帳の永続化
+    db.ts                    PostgreSQLによるwindow、履歴、cost台帳の永続化
     github.ts                gh CLIからGitHub IssueとCI runを取得
     shellEnv.ts              child process用PATHとshell環境
     fs.ts / git.ts           sandbox化されたfsとgitのbridge

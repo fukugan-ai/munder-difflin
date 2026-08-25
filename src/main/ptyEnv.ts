@@ -28,6 +28,7 @@
  * Claude identity.
  */
 const CLAUDE_MARKER_RE = /^CLAUDE(CODE|_)/;
+const POSTGRES_SECRET_RE = /^MD_PG_/;
 
 /**
  * Configuration, not identity: these share the prefix but are the OPERATOR's
@@ -56,10 +57,11 @@ export function buildPtyEnv(
   const inherited: Record<string, string> = {};
   for (const [k, v] of Object.entries(parentEnv)) {
     if (v === undefined) continue;
+    if (POSTGRES_SECRET_RE.test(k)) continue;
     if (CLAUDE_MARKER_RE.test(k) && !CLAUDE_CONFIG_KEEP.has(k)) continue;
     inherited[k] = v;
   }
-  return {
+  const combined: Record<string, string> = {
     ...inherited,
     PATH: userPath,
     TERM: 'xterm-256color',
@@ -87,4 +89,6 @@ export function buildPtyEnv(
     // Per-agent hive identity (AGENT_ID, HIVE_ROOT, …) when provided.
     ...(agentEnv ?? {})
   };
+  for (const key of Object.keys(combined)) if (POSTGRES_SECRET_RE.test(key)) delete combined[key];
+  return combined;
 }

@@ -1,8 +1,8 @@
 /**
  * Usage telemetry seam (Lane A #6.6 — Seam 1, the LOCKED contract with Oscar/#7).
  *
- * The circuit breaker (breaker.ts) and the durable cost ledger (hive.ts
- * appendCostLedger) consume usage ONLY through the `UsageProvider` interface —
+ * The circuit breaker and PostgreSQL durable cost ledger consume usage ONLY
+ * through the `UsageProvider` interface —
  * they never read transcripts, never compute tokens, and never recompute `usd`.
  * That keeps a single source of truth for cost and lets the backend swap with
  * zero changes to the consumers:
@@ -28,9 +28,7 @@
  */
 import { readAgentUsage } from './transcript';
 
-/** One cumulative usage snapshot for an agent. The identical row that Oscar
- *  emits, Jim (this lane) persists to cost-ledger.jsonl, and Kevin (#4) stores
- *  in the cost_ledger SQLite table — one shape across all three lanes.
+/** One cumulative usage snapshot persisted to PostgreSQL cost_ledger.
  *
  *  🔒 PII-free by construction: the provider's normalize step allowlists only
  *  these fields and strips every identity attribute (user.email, account/uuid,

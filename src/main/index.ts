@@ -290,6 +290,9 @@ function standingGoalFromRoster(agentId: string): string | null {
 // background window can't leave a worker parked on an unread inbox forever).
 // HookServer feeds it the hook stream so a permission/HITL prompt blocks nudges.
 const workerWake = new WorkerWakeWatchdog();
+// PostgreSQL is the sole durable authority. Construction consumes the password
+// before any PTY or helper process can inherit it.
+const persist = new PersistStore();
 // HookServer needs BOTH: Oscar's control registry (HITL pause/gate/steer/halt via
 // hook returns) AND Jim's breaker (feed recordToolUse on each PostToolUse).
 const hookServer = new HookServer(
@@ -299,7 +302,8 @@ const hookServer = new HookServer(
   control,
   breaker,
   standingGoalFromRoster,
-  (agentId, event, message) => workerWake.noteHook(agentId, event, message)
+  (agentId, event, message) => workerWake.noteHook(agentId, event, message),
+  (sample) => { persist.appendCost(sample); }
 );
 const memory = new MemoryManager(
   () => readConfig().harnessHome,
@@ -329,9 +333,6 @@ const reflector = new MemoryReflector(
   reflectSettings,
   (event) => { try { hive.appendLog(event); } catch { /* best-effort */ } }
 );
-// Durable harness state (SQLite, main process). Phase A: window bounds (kv) +
-// net-new command history. Opened in whenReady, closed in the teardown blocks.
-const persist = new PersistStore();
 /** The PRIMARY window — the one running the hive/god orchestration and the sink
  *  for process-global timer events (missions, breaker, Slack ingestion). It is
  *  the most-recently-focused live window, so global events follow the user.
@@ -1205,7 +1206,7 @@ function runBreakerBeat(progressWindowMs: number): void {
     // (2,417 dupes observed). A truthy sessionId is set only by a live session
     // (aggregateLive picks the most-recent live session id), so this gates on
     // "is there a live session" without changing any live-agent behavior.
-    if (sample?.sessionId) hive.appendCostLedger(sample); // ledger covers everyone incl. god
+    if (sample?.sessionId) persist.appendCost(sample); // PostgreSQL ledger covers everyone incl. god
     // Second source for the resume key. recordSession() is otherwise reachable
     // ONLY from the hook shim, so any window where hooks don't land leaves the
     // registry with no sessionId and "Restart & Continue" refuses to continue —
@@ -1250,10 +1251,10 @@ function runBreakerBeat(progressWindowMs: number): void {
   }
 }
 
-/** Lifetime spend, folded from cost-ledger.jsonl. `telemetry`'s usd counter is
+/** Lifetime spend, queried from PostgreSQL. `telemetry`'s usd counter is
  *  cumulative-since-process-start and restarts at ~0 on every app restart, so
  *  it cannot answer "what has this agent cost us". See costLifetime.ts. */
-const costTotals = new CostLedgerTotals();
+const costTotals = new CostLedgerTotals(() => persist.lifetimeCostTotals());
 
 /** Build + write the live fleet snapshot Michael reads (`<hive>/fleet.json`).
  *  Always-on (independent of the heartbeat) since `claude agents` can't see the
@@ -1266,8 +1267,7 @@ function writeFleetSnapshot(): void {
     const usageById = new Map(snap.usage.map((u) => [u.agentId, u]));
     const now = Date.now();
     // Async + incremental; returns immediately and never throws into the timer.
-    const hiveRoot = hive.root();
-    if (hiveRoot) void costTotals.refresh(join(hiveRoot, 'cost-ledger.jsonl'));
+    void costTotals.refresh();
     const agents = Object.entries(reg.agents)
       .filter(([, a]) => !a.archived)
       .map(([id, a]) => {
@@ -3663,14 +3663,15 @@ ipcMain.handle('clipboard:saveImage', async () => {
   }
 });
 
-// ─── IPC: command history (SQLite — every prompt submitted to an agent) ──────
-ipcMain.handle('history:add', (_evt, payload: unknown) => {
+// ─── IPC: command history (PostgreSQL — every prompt submitted to an agent) ──
+ipcMain.handle('db:status', () => persist.status);
+ipcMain.handle('history:add', async (_evt, payload: unknown) => {
   const p = (payload ?? {}) as { agentId?: unknown; cwd?: unknown; text?: unknown };
   if (typeof p.agentId !== 'string' || typeof p.text !== 'string') return { ok: false, error: 'invalid args' };
   try {
-    persist.addHistory({ agentId: p.agentId, cwd: typeof p.cwd === 'string' ? p.cwd : null, text: p.text });
-    return { ok: true };
-  } catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }
+    const committed = await persist.addHistory({ agentId: p.agentId, cwd: typeof p.cwd === 'string' ? p.cwd : null, text: p.text });
+    return committed ? { ok: true } : { ok: false, error: 'persistence unavailable' };
+  } catch { return { ok: false, error: 'persistence unavailable' }; }
 });
 ipcMain.handle('history:list', (_evt, agentId: unknown, limit: unknown) =>
   persist.listHistory(
@@ -3683,7 +3684,7 @@ ipcMain.handle('history:search', (_evt, query: unknown, limit: unknown) =>
 // ─── IPC: quit confirmation ─────────────────────────────────────────────────
 /** Tear the harness down and quit. Shared by the hard "kill all & quit" path
  *  and the closing-time conclusion (after the god confirmed the floor saved). */
-function teardownAndQuit(): void {
+async function teardownAndQuit(): Promise<void> {
   allowQuit = true;
   // Each teardown step is best-effort: a throw here (e.g. a dying child or a
   // half-torn-down socket) must never abort the quit or pop a crash dialog.
@@ -3699,14 +3700,14 @@ function teardownAndQuit(): void {
   try { stopWebhookServer(); } catch (e) { console.error('[quit] webhook.stop:', e); }
   try { memory.stop(); } catch (e) { console.error('[quit] memory.stop:', e); }
   try { reflector.stop(); } catch (e) { console.error('[quit] reflector.stop:', e); }
-  try { persist.close(); } catch (e) { console.error('[quit] persist.close:', e); }
+  try { await persist.close(); } catch { console.error('[quit] persistence close failed'); }
   try { hive.stopAllProxyBridges(); } catch (e) { console.error('[quit] stopAllProxyBridges:', e); }
   try { ptyManager.killAll(); } catch (e) { console.error('[quit] killAll:', e); }
   app.quit();
 }
 ipcMain.handle('app:confirmClose', () => {
   closingTime.cancel(); // a hard quit overrides a closing time in progress
-  teardownAndQuit();
+  void teardownAndQuit();
 });
 ipcMain.handle('app:cancelClose', () => {
   // The modal closes on the renderer side. The one thing main owes anybody here
@@ -3745,7 +3746,7 @@ ipcMain.handle('app:startClosingTime', () => closingTime.start());
 ipcMain.handle('app:cancelClosingTime', () => closingTime.cancel());
 
 // ─── IPC: full reset (wipe data + config, relaunch into onboarding) ──────────
-ipcMain.handle('app:resetAll', () => {
+ipcMain.handle('app:resetAll', async () => {
   allowQuit = true;
   // Tear everything down first so nothing writes back into the dirs we wipe.
   try { clearMissionTimers(); } catch (e) { console.error('[reset] clearMissionTimers:', e); }
@@ -3759,7 +3760,11 @@ ipcMain.handle('app:resetAll', () => {
   try { stopSlackServer(); } catch (e) { console.error('[reset] slack.stop:', e); }
   try { memory.stop(); } catch (e) { console.error('[reset] memory.stop:', e); }
   try { reflector.stop(); } catch (e) { console.error('[reset] reflector.stop:', e); }
-  try { persist.close(); } catch (e) { console.error('[reset] persist.close:', e); }
+  if (!await persist.resetNamespace()) {
+    allowQuit = false;
+    return { ok: false, error: 'PostgreSQL reset failed; local state was preserved.' };
+  }
+  try { await persist.close(); } catch { console.error('[reset] persistence close failed'); }
   try { ptyManager.killAll(); } catch (e) { console.error('[reset] killAll:', e); }
   // Erase the hive (Michael's + every agent's memory, inboxes, tasks, board,
   // git history) and the semantic-memory palace. Only these harness-created
@@ -3780,6 +3785,7 @@ ipcMain.handle('app:resetAll', () => {
   resetConfig();
   app.relaunch();
   app.exit(0);
+  return { ok: true };
 });
 
 // ─── IPC: token telemetry (real usage + est. cost from CC transcripts) ───────
@@ -5165,7 +5171,7 @@ function onSystemResume(reason: string): void {
   }, 15_000);
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Realtime Michael mic-gate hygiene (rt-8 / Pam rt-10 nit): the voice session
   // opens the mic permission gate by persisting realtimeVoiceEnabled=true and
   // closes it on disconnect — but a hard crash/reload mid-session skips that
@@ -5195,7 +5201,8 @@ app.whenReady().then(() => {
   // Open the durable store first — createWindow() reads the saved window bounds.
   // Guarded: a DB failure (e.g. a bad native build) must degrade to defaults,
   // never block app startup.
-  try { persist.open(); } catch (e) { console.error('[db] open failed:', e); }
+  const dbStatus = await persist.open();
+  if (dbStatus.state === 'degraded') console.warn(`[db] degraded: ${dbStatus.code}`);
   // Auto-update from GitHub releases (packaged builds only; gated on the
   // `autoUpdate` config flag). Download-in-background + restart-to-apply toast;
   // never restarts on its own. Falls back to a notify-only releases/latest
@@ -5258,7 +5265,7 @@ app.on('window-all-closed', () => {
     // Full teardown, not a bare killAll: this path must also stop the proxy
     // sidecars and helper servers — on Windows a child is NOT killed when its
     // parent exits, so anything skipped here outlives the app.
-    teardownAndQuit();
+    void teardownAndQuit();
   }
 });
 
@@ -5283,7 +5290,7 @@ app.on('will-quit', (e) => {
   e.preventDefault();
   const finish = (): void => app.exit(0);
   Promise.race([
-    analytics.endSession(),
+    Promise.all([analytics.endSession(), persist.close()]).then(() => undefined),
     new Promise<void>((r) => setTimeout(r, 1200))
   ]).then(finish, finish);
 });

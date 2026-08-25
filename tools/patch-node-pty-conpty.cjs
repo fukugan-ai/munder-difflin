@@ -2,7 +2,7 @@
 'use strict';
 /**
  * Windows-only node-pty crash guard, re-applied on every install (postinstall,
- * after electron-rebuild). No-op on non-Windows and when already patched.
+ * after dependency installation). No-op on non-Windows and when already patched.
  *
  * node-pty forks `conpty_console_list_agent.js` to enumerate console processes
  * when a pty is killed/exits. For a child whose console is already gone — e.g.

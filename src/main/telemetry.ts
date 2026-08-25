@@ -19,8 +19,8 @@
  * `organization.id` and a hashed `user.id`. We read ONLY an allowlist of keys
  * ({agent.id, session.id, model, token type, cost, tool fields}) and never
  * persist a raw record — so everything this module emits is PII-free BY
- * CONSTRUCTION. Downstream durable stores (Lane A's cost-ledger, Lane B's
- * SQLite) inherit that guarantee and must never persist a raw record either.
+ * CONSTRUCTION. The PostgreSQL durable store inherits that guarantee and must
+ * never persist a raw record either.
  *
  * Transport posture mirrors `slack.ts`: the local handler bound to 127.0.0.1 is
  * the security boundary. Runs in the Electron main process; deliberately free of
@@ -33,8 +33,8 @@ import { normalizeModel } from './pricing';
 // ─── The locked cross-lane contract (do not change without re-agreeing) ───────
 
 /** A cumulative cost/token snapshot for one agent. The shared row consumed by
- *  Lane A's breaker (#6) and persisted by Lane A's cost-ledger / Lane B's SQLite
- *  (#4). PII-free by construction (see file header). `usd` is Claude's own
+ *  Lane A's breaker and PostgreSQL cost ledger consume. PII-free by construction
+ *  (see file header). `usd` is Claude's own
  *  per-model cost on the live path, the fallback estimate on the transcript
  *  path — never recomputed downstream. */
 export interface AgentUsageSample {

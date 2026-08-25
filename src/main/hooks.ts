@@ -18,6 +18,7 @@ import type { HarnessConfig } from './config';
 import type { ControlRegistry } from './control';
 import type { CircuitBreaker } from './breaker';
 import { estimateCostUsd } from './pricing';
+import type { AgentUsageSample } from './usage';
 
 interface HookPayload {
   hook_event_name?: string;
@@ -74,7 +75,9 @@ export class HookServer {
     /** Optional observer of every hook boundary (agentId, event, message). The
      *  worker inbox-wake watchdog (workerWake.ts) feeds on this to learn when an
      *  agent is parked on a permission/HITL prompt so it never types into it. */
-    private onEvent?: (agentId: string | undefined, event: string, message: string | undefined) => void
+    private onEvent?: (agentId: string | undefined, event: string, message: string | undefined) => void,
+    /** PostgreSQL cost authority supplied by main; no filesystem fallback. */
+    private appendCost?: (sample: AgentUsageSample) => void
   ) {}
 
   start(): void {
@@ -181,7 +184,7 @@ export class HookServer {
         const output = p.output ?? 0;
         const cacheRead = p.cache_read ?? 0;
         const cacheCreation = p.cache_creation ?? 0;
-        this.hive.appendCostLedger({
+        this.appendCost?.({
           agentId,
           sessionId: p.session_id,
           ts: Date.now(),

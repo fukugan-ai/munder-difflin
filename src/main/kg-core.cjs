@@ -4,7 +4,7 @@
  * local, file-backed enterprise knowledge store. PURE JS (only node:fs / path /
  * crypto) so it loads under BOTH the Electron main process AND a plain `node`
  * invocation from a spawned agent's shell — the same robustness reason
- * `slack-trigger.cjs` / `md-slack-reply.cjs` avoid the native better-sqlite3
+ * `slack-trigger.cjs` / `md-slack-reply.cjs` avoid native Electron dependencies
  * module. See docs/design/knowledge-graph.md.
  *
  * Store layout (rooted at KG_ROOT, default <userData>/knowledge):

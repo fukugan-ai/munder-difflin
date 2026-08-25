@@ -26,7 +26,6 @@ import { join, dirname, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { spawnSync, spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes, createHash } from 'node:crypto';
-import type { AgentUsageSample } from './usage';
 import { COMMAND_GROUPS } from '../shared/claudeCommands';
 import {
   isClaudeProvider,
@@ -546,7 +545,7 @@ export class HiveManager {
 
     // Keep the churny/ephemeral live files out of the hive git repo.
     const gitignore = join(root, '.gitignore');
-    const want = ['fleet.json', 'hooks.sock', 'cost-ledger.jsonl', '.DS_Store'];
+    const want = ['fleet.json', 'hooks.sock', '.DS_Store'];
     let lines: string[] = [];
     if (existsSync(gitignore)) { try { lines = readFileSync(gitignore, 'utf8').split('\n'); } catch { lines = []; } }
     const missing = want.filter((w) => !lines.includes(w));
@@ -2236,42 +2235,6 @@ export class HiveManager {
     try { appendFileSync(join(root, 'log.jsonl'), line, 'utf8'); } catch { /* noop */ }
   }
 
-  /**
-   * Append one cost sample to the durable, append-only ledger at
-   * `<root>/cost-ledger.jsonl` (Lane A #6.6d). This is the SOLE durable cost
-   * store; its row is exactly the shape Kevin (#4) reserves for the cost_ledger
-   * SQLite table, so migration is a mechanical INSERT…SELECT.
-   *
-   * 🔒 PII: persist ONLY the allowlisted AgentUsageSample — NEVER a raw OTel
-   * record (those carry user.email / account / org / hashed-user-id). The sample
-   * is PII-free by construction upstream (the provider's normalize step), so we
-   * add no redaction here; we just must not widen what we write. The file lives
-   * at the hive ROOT, so `mempalace mine` (which only scans per-agent dirs) never
-   * ingests it — no palace noise, no MINE_IGNORE entry needed.
-   *
-   * Like appendLog: append to disk now (durable immediately), let it ride the
-   * next natural commit. Best-effort — never throws into the beat.
-   */
-  appendCostLedger(sample: AgentUsageSample): void {
-    const root = this.root();
-    if (!root) return;
-    // Fully snake_case so the row maps 1:1 onto Kevin's (#4) cost_ledger SQLite
-    // columns (agent_id, session_id, ts, input, output, cache_read,
-    // cache_creation, model, usd) — migration is a straight INSERT…SELECT.
-    const row = {
-      agent_id: sample.agentId,
-      session_id: sample.sessionId,
-      ts: sample.ts,
-      input: sample.input,
-      output: sample.output,
-      cache_read: sample.cacheRead,
-      cache_creation: sample.cacheCreation,
-      model: sample.model,
-      usd: sample.usd
-    };
-    try { appendFileSync(join(root, 'cost-ledger.jsonl'), JSON.stringify(row) + '\n', 'utf8'); } catch { /* noop */ }
-  }
-
   // — json + atomic io —
   private readJson<T>(p: string, fallback: T): T {
     try { return JSON.parse(readFileSync(p, 'utf8')) as T; } catch { return fallback; }
@@ -2291,34 +2254,6 @@ export class HiveManager {
       cwd, encoding: 'utf8', timeout: 8000
     });
     return { ok: res.status === 0, out: res.stdout ?? '', err: res.stderr ?? '' };
-  }
-
-  /** Has the one-time cost-ledger untrack pass run in this process yet? */
-  private untrackedCostLedger = false;
-
-  /**
-   * Stop versioning the cost ledger.
-   *
-   * `cost-ledger.jsonl` is append-only and gains a row per usage sample, so a
-   * repo that tracks it stores a fresh copy of the WHOLE file on every hive
-   * commit — and the hive commits constantly. A quarter-gigabyte ledger with a
-   * few thousand commits behind it is several hundred gigabytes of blob that
-   * git has to walk, which is what turns a routine `gc` into a multi-gigabyte
-   * `pack-objects` run. The ignore line in ensureHive keeps new copies out;
-   * this drops the one already in the index, because git keeps recording a
-   * file it is already tracking no matter what .gitignore says — so the ignore
-   * line alone reads as a fix while the repo goes on growing. The ledger stays
-   * on disk, so the cost history the app reads is untouched.
-   */
-  private untrackCostLedger(root: string): void {
-    if (this.untrackedCostLedger) return;
-    this.untrackedCostLedger = true;
-    // Probe before mutating: `rm --cached` on a repo that never tracked it
-    // would still rewrite the index on every launch, inside the retry path.
-    const tracked = this.git(['ls-files', '--', 'cost-ledger.jsonl'], root);
-    if (!tracked.ok || !tracked.out.trim()) return;
-    this.git(['rm', '--cached', '-q', '--ignore-unmatch', '--', 'cost-ledger.jsonl'], root);
-    console.warn('[hive] untracked the cost ledger from the hive repo');
   }
 
   /** Has the one-time Codex-home untrack pass run in this process yet? */
@@ -2357,7 +2292,6 @@ export class HiveManager {
   commit(message: string): void {
     const root = this.root();
     if (!root || !existsSync(join(root, '.git'))) return;
-    this.untrackCostLedger(root);
     this.untrackCodexHomes(root);
     for (let attempt = 0; attempt < 5; attempt++) {
       this.clearStaleLock(root);

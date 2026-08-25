@@ -96,6 +96,16 @@ test('app defaults land: PATH, terminal identity, color', () => {
   assert.equal(env.FORCE_COLOR, '1');
 });
 
+test('PostgreSQL connection settings never reach PTYs, including overrides', () => {
+  const env = buildPtyEnv(
+    { MD_PG_HOST: 'localhost', MD_PG_PASSWORD: 'parent-secret' },
+    '/bin',
+    { MD_PG_USER: 'override', MD_PG_PASSWORD: 'override-secret' },
+    'linux'
+  );
+  assert.equal(Object.keys(env).some((key) => key.startsWith('MD_PG_')), false);
+});
+
 test('locale: UTF-8 defaults on darwin, the user\'s exported locale wins, win32 untouched', () => {
   const bare = buildPtyEnv({}, '/bin', undefined, 'darwin');
   assert.equal(bare.LANG, 'en_US.UTF-8');
