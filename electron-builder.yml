@@ -116,6 +116,8 @@ dmg:
 # ---- Windows ----
 win:
   icon: build/icon.ico
+  # Squirrel.Windows is intentionally unsupported. The latest upstream target
+  # still depends on an unmaintained temp/rimraf 2 chain; use NSIS or portable.
   target:
     - target: nsis
       arch: [x64]

@@ -1,0 +1,9 @@
+{
+  "name": "electron-builder-squirrel-windows",
+  "version": "26.15.3",
+  "private": true,
+  "description": "Fail-closed compatibility peer for unsupported Squirrel.Windows builds.",
+  "main": "index.cjs",
+  "exports": "./index.cjs",
+  "type": "commonjs"
+}
