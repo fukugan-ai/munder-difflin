@@ -1287,6 +1287,158 @@ pub(crate) async fn connections_remove_mission(
     }
 }
 
+#[cfg(feature = "server")]
+fn cli_auth_executable(
+    provider: md_web_contracts::domains::connections::CliAuthProvider,
+) -> Option<std::path::PathBuf> {
+    use md_web_contracts::domains::connections::CliAuthProvider;
+    use md_web_services::domains::config_onboarding::{host_platform, resolve_on_path};
+
+    let binary = match provider {
+        CliAuthProvider::Codex => "codex",
+        CliAuthProvider::Claude => "claude",
+    };
+    if std::env::var("MD_TEST_CLI_AUTH_BINARIES").as_deref() == Ok("true") {
+        let unavailable_key = match provider {
+            CliAuthProvider::Codex => "MD_TEST_CLI_AUTH_CODEX_NOT_INSTALLED",
+            CliAuthProvider::Claude => "MD_TEST_CLI_AUTH_CLAUDE_NOT_INSTALLED",
+        };
+        if std::env::var(unavailable_key).as_deref() == Ok("true") {
+            return None;
+        }
+        let key = match provider {
+            CliAuthProvider::Codex => "MD_TEST_CLI_AUTH_CODEX_BIN",
+            CliAuthProvider::Claude => "MD_TEST_CLI_AUTH_CLAUDE_BIN",
+        };
+        if let Some(candidate) = std::env::var_os(key)
+            .map(std::path::PathBuf::from)
+            .filter(|path| path.is_absolute())
+            .and_then(|path| std::fs::canonicalize(path).ok())
+            .filter(|path| path.is_file())
+        {
+            return Some(candidate);
+        }
+    }
+    resolve_on_path(
+        binary,
+        &std::env::var_os("PATH").unwrap_or_default(),
+        host_platform(),
+    )
+}
+
+#[get("/api/connections/provider-auth")]
+pub(crate) async fn connections_cli_auth_snapshot()
+-> Result<md_web_contracts::domains::connections::CliAuthSnapshot, ServerFnError> {
+    #[cfg(feature = "server")]
+    {
+        use md_web_contracts::domains::connections::CliAuthProvider;
+
+        let executables = [
+            (
+                CliAuthProvider::Codex,
+                cli_auth_executable(CliAuthProvider::Codex),
+            ),
+            (
+                CliAuthProvider::Claude,
+                cli_auth_executable(CliAuthProvider::Claude),
+            ),
+        ];
+        tokio::task::spawn_blocking(move || {
+            md_web_services::domains::connections::provider_auth_registry().snapshot(&executables)
+        })
+        .await
+        .map_err(|_| safe_error())?
+        .map_err(|_| safe_error())
+    }
+    #[cfg(not(feature = "server"))]
+    {
+        Err(safe_error())
+    }
+}
+
+#[post("/api/connections/provider-auth/start")]
+pub(crate) async fn connections_start_cli_auth(
+    provider: md_web_contracts::domains::connections::CliAuthProvider,
+) -> Result<md_web_contracts::domains::connections::CliAuthView, ServerFnError> {
+    #[cfg(feature = "server")]
+    {
+        let executable = cli_auth_executable(provider)
+            .ok_or_else(|| ServerFnError::new("CLIがインストールされていません"))?;
+        md_web_services::domains::connections::provider_auth_registry()
+            .start(provider, &executable)
+            .map_err(|_| safe_error())
+    }
+    #[cfg(not(feature = "server"))]
+    {
+        let _ = provider;
+        Err(safe_error())
+    }
+}
+
+#[post("/api/connections/provider-auth/poll")]
+pub(crate) async fn connections_poll_cli_auth(
+    provider: md_web_contracts::domains::connections::CliAuthProvider,
+    generation: u64,
+) -> Result<md_web_contracts::domains::connections::CliAuthView, ServerFnError> {
+    #[cfg(feature = "server")]
+    {
+        md_web_services::domains::connections::provider_auth_registry()
+            .poll(provider, generation)
+            .map_err(|_| safe_error())
+    }
+    #[cfg(not(feature = "server"))]
+    {
+        let _ = (provider, generation);
+        Err(safe_error())
+    }
+}
+
+#[post("/api/connections/provider-auth/code")]
+pub(crate) async fn connections_submit_cli_auth_code(
+    request: md_web_contracts::domains::connections::CliAuthCodeInput,
+) -> Result<md_web_contracts::domains::connections::CliAuthView, ServerFnError> {
+    #[cfg(feature = "server")]
+    {
+        md_web_services::domains::connections::provider_auth_registry()
+            .submit_code(request.provider, request.generation, &request.code)
+            .map_err(|_| safe_error())
+    }
+    #[cfg(not(feature = "server"))]
+    {
+        let _ = request;
+        Err(safe_error())
+    }
+}
+
+#[post("/api/connections/provider-auth/cancel")]
+pub(crate) async fn connections_cancel_cli_auth(
+    provider: md_web_contracts::domains::connections::CliAuthProvider,
+    generation: u64,
+) -> Result<md_web_contracts::domains::connections::CliAuthView, ServerFnError> {
+    #[cfg(feature = "server")]
+    {
+        tokio::task::spawn_blocking(move || {
+            md_web_services::domains::connections::provider_auth_registry()
+                .cancel(provider, generation)
+        })
+        .await
+        .map_err(|_| safe_error())?
+        .map_err(|_| safe_error())
+    }
+    #[cfg(not(feature = "server"))]
+    {
+        let _ = (provider, generation);
+        Err(safe_error())
+    }
+}
+
+#[cfg(feature = "server")]
+pub(crate) fn shutdown_provider_auth() -> Result<(), ServerFnError> {
+    md_web_services::domains::connections::provider_auth_registry()
+        .shutdown_all()
+        .map_err(|_| safe_error())
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "server")]

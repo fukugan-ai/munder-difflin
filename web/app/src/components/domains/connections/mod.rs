@@ -1,8 +1,9 @@
 use dioxus::prelude::*;
 use md_web_contracts::domains::connections::{
-    ConnectionsSnapshot, ContextAction, ContextRule, ContextTriggerConfig, IntegrationAuthType,
-    IntegrationKind, IntegrationUpsert, MissionKind, OneTimeSecret, RuntimeStatus,
-    ScheduledMission, TriggerDecision, TriggerMode, TriggerSource,
+    CliAuthPhase, CliAuthProvider, CliAuthSnapshot, CliAuthView, ConnectionsSnapshot,
+    ContextAction, ContextRule, ContextTriggerConfig, IntegrationAuthType, IntegrationKind,
+    IntegrationUpsert, MissionKind, OneTimeSecret, RuntimeStatus, ScheduledMission,
+    TriggerDecision, TriggerMode, TriggerSource,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -55,6 +56,17 @@ pub enum ConnectionUiAction {
     UpsertMission(ScheduledMission),
     StartBroker,
     StopBroker,
+    StartCliAuth(CliAuthProvider),
+    CancelCliAuth {
+        provider: CliAuthProvider,
+        generation: u64,
+    },
+    RefreshCliAuth,
+    SubmitCliAuthCode {
+        provider: CliAuthProvider,
+        generation: u64,
+        code: String,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -66,6 +78,7 @@ enum PanelTab {
 #[component]
 pub fn ConnectionsPanel(
     snapshot: ConnectionsSnapshot,
+    cli_auth: CliAuthSnapshot,
     one_time_secret: Option<OneTimeSecret>,
     on_action: EventHandler<ConnectionUiAction>,
 ) -> Element {
@@ -230,6 +243,28 @@ pub fn ConnectionsPanel(
                                 "停止"
                             }
                             if let Some(url) = broker.public_url { code { class: "connection-url", {url} } }
+                        }
+                    }
+
+                    section { class: "connection-card", aria_labelledby: "cli-auth-title", "data-testid": "cli-auth-card",
+                        div { class: "connection-card__heading",
+                            div {
+                                h2 { id: "cli-auth-title", "AI CLIアカウント" }
+                                p { "ブラウザーで公式の認証ページを開き、CLIの接続状態だけを確認します。" }
+                            }
+                            button {
+                                class: "connection-button connection-button--quiet",
+                                r#type: "button",
+                                onclick: move |_| on_action.call(ConnectionUiAction::RefreshCliAuth),
+                                "状態を更新"
+                            }
+                        }
+                        div { class: "connection-list", aria_live: "polite",
+                            for provider in [CliAuthProvider::Codex, CliAuthProvider::Claude] {
+                                if let Some(view) = cli_auth.providers.iter().find(|view| view.provider == provider) {
+                                    ProviderAuthRow { view: view.clone(), on_action }
+                                }
+                            }
                         }
                     }
 
@@ -623,6 +658,133 @@ fn ToggleButton(label: &'static str, enabled: bool, on_toggle: EventHandler<bool
 }
 
 #[component]
+fn ProviderAuthRow(view: CliAuthView, on_action: EventHandler<ConnectionUiAction>) -> Element {
+    let mut input_code = use_signal(String::new);
+    let provider = view.provider;
+    let generation = view.generation;
+    let primary_control_id = match provider {
+        CliAuthProvider::Codex => "cli-auth-codex-primary",
+        CliAuthProvider::Claude => "cli-auth-claude-primary",
+    };
+    let active = matches!(
+        view.phase,
+        CliAuthPhase::Starting | CliAuthPhase::AwaitingUser | CliAuthPhase::Verifying
+    );
+    let connected = view.phase == CliAuthPhase::Connected;
+    let failed = matches!(
+        view.phase,
+        CliAuthPhase::Failed | CliAuthPhase::Cancelled | CliAuthPhase::TimedOut
+    );
+    let status_class = if connected {
+        "connection-status is-ready"
+    } else {
+        "connection-status"
+    };
+    let (button_label, state) = auth_button_presentation(view.phase);
+
+    rsx! {
+        article { class: "connection-row connection-row--stacked cli-auth-row", "data-provider": "{provider.label()}",
+            div { class: "connection-row__main",
+                strong { {provider.label()} }
+                span { class: status_class, {view.detail_ja.clone()} }
+            }
+            if let Some(uri) = view.verification_uri.clone() {
+                div { class: "cli-auth-prompt",
+                    a {
+                        class: "connection-button connection-button--primary",
+                        href: uri,
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                        "サインインを開く"
+                    }
+                    if let Some(code) = view.user_code.clone() {
+                        code { class: "cli-auth-code", {code.clone()} }
+                        button {
+                            class: "connection-button connection-button--quiet",
+                            r#type: "button",
+                            onclick: move |_| {
+                                let script = format!("navigator.clipboard.writeText({code:?})");
+                                document::eval(&script);
+                            },
+                            "コードをコピー"
+                        }
+                    }
+                }
+            }
+            if view.accepts_code_input {
+                div { class: "connection-form-grid cli-auth-input",
+                    label { class: "connection-field",
+                        span { "CLIが要求したコード" }
+                        input {
+                            r#type: "text",
+                            autocomplete: "one-time-code",
+                            value: "{input_code}",
+                            oninput: move |event| input_code.set(event.value()),
+                        }
+                    }
+                    button {
+                        class: "connection-button connection-button--primary",
+                        r#type: "button",
+                        disabled: input_code().trim().is_empty(),
+                        onclick: move |_| on_action.call(ConnectionUiAction::SubmitCliAuthCode {
+                            provider,
+                            generation,
+                            code: input_code().trim().to_owned(),
+                        }),
+                        "コードを送信"
+                    }
+                }
+            }
+            div { class: "connection-actions",
+                button {
+                    id: primary_control_id,
+                    class: "connection-button connection-button--primary",
+                    r#type: "button",
+                    disabled: active || connected || view.phase == CliAuthPhase::NotInstalled,
+                    "data-ui-state": state,
+                    onclick: move |_| on_action.call(ConnectionUiAction::StartCliAuth(provider)),
+                    {button_label}
+                }
+                if view.can_cancel {
+                    button {
+                        class: "connection-button connection-button--quiet",
+                        r#type: "button",
+                        onclick: move |_| {
+                            on_action.call(ConnectionUiAction::CancelCliAuth {
+                                provider,
+                                generation,
+                            });
+                            let script = format!(
+                                "setTimeout(() => document.getElementById({primary_control_id:?})?.focus(), 800)"
+                            );
+                            document::eval(&script);
+                        },
+                        "キャンセル"
+                    }
+                }
+            }
+            if failed {
+                p { class: "connection-note", role: "alert", "もう一度試すか、CLIのインストール状態を確認してください。" }
+            }
+        }
+    }
+}
+
+const fn auth_button_presentation(phase: CliAuthPhase) -> (&'static str, &'static str) {
+    match phase {
+        CliAuthPhase::NotInstalled => ("CLI未検出", "default"),
+        CliAuthPhase::Starting => ("開始中…", "loading"),
+        CliAuthPhase::AwaitingUser => ("認証待ち", "loading"),
+        CliAuthPhase::Verifying => ("確認中…", "loading"),
+        CliAuthPhase::Connected => ("接続済み", "success"),
+        CliAuthPhase::Failed | CliAuthPhase::Cancelled | CliAuthPhase::TimedOut => {
+            ("再試行", "error")
+        }
+        CliAuthPhase::SignedOut | CliAuthPhase::StatusUnknown => ("接続", "default"),
+    }
+}
+
+#[component]
 fn IntegrationEditor(on_action: EventHandler<ConnectionUiAction>) -> Element {
     let mut id = use_signal(String::new);
     let mut label = use_signal(String::new);
@@ -875,7 +1037,9 @@ fn format_duration(milliseconds: u64) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::format_duration;
+    use md_web_contracts::domains::connections::CliAuthPhase;
+
+    use super::{auth_button_presentation, format_duration};
 
     #[test]
     fn whole_hours_are_formatted_as_hours() {
@@ -885,5 +1049,29 @@ mod tests {
     #[test]
     fn partial_hours_are_formatted_as_minutes() {
         assert_eq!(format_duration(5_400_000), "90分");
+    }
+
+    #[test]
+    fn cli_auth_button_exposes_loading_error_and_success_states() {
+        assert_eq!(
+            auth_button_presentation(CliAuthPhase::Starting),
+            ("開始中…", "loading")
+        );
+        assert_eq!(
+            auth_button_presentation(CliAuthPhase::Failed),
+            ("再試行", "error")
+        );
+        assert_eq!(
+            auth_button_presentation(CliAuthPhase::Connected),
+            ("接続済み", "success")
+        );
+    }
+
+    #[test]
+    fn missing_cli_is_truthfully_disabled_state() {
+        assert_eq!(
+            auth_button_presentation(CliAuthPhase::NotInstalled),
+            ("CLI未検出", "default")
+        );
     }
 }

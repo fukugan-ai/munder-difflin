@@ -32,6 +32,98 @@ pub enum RuntimeStatus {
     Failed,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub enum CliAuthProvider {
+    Codex,
+    Claude,
+}
+
+impl CliAuthProvider {
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Codex => "Codex",
+            Self::Claude => "Claude Code",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum CliAuthPhase {
+    NotInstalled,
+    StatusUnknown,
+    SignedOut,
+    Starting,
+    AwaitingUser,
+    Verifying,
+    Connected,
+    Failed,
+    Cancelled,
+    TimedOut,
+}
+
+/// Browser-safe projection of a server-owned CLI authentication process.
+///
+/// The verification URI and device code are intentionally ephemeral. This
+/// value is never part of [`ConnectionsSnapshot`] and must not be persisted.
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+pub struct CliAuthView {
+    pub provider: CliAuthProvider,
+    pub phase: CliAuthPhase,
+    pub generation: u64,
+    pub verification_uri: Option<String>,
+    pub user_code: Option<String>,
+    pub deadline_at_ms: Option<u64>,
+    pub can_cancel: bool,
+    pub accepts_code_input: bool,
+    pub retryable: bool,
+    pub detail_ja: String,
+}
+
+impl Debug for CliAuthView {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("CliAuthView")
+            .field("provider", &self.provider)
+            .field("phase", &self.phase)
+            .field("generation", &self.generation)
+            .field(
+                "verification_uri",
+                &self.verification_uri.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("user_code", &self.user_code.as_ref().map(|_| "[REDACTED]"))
+            .field("deadline_at_ms", &self.deadline_at_ms)
+            .field("can_cancel", &self.can_cancel)
+            .field("accepts_code_input", &self.accepts_code_input)
+            .field("retryable", &self.retryable)
+            .field("detail_ja", &self.detail_ja)
+            .finish()
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct CliAuthSnapshot {
+    pub providers: Vec<CliAuthView>,
+}
+
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
+pub struct CliAuthCodeInput {
+    pub provider: CliAuthProvider,
+    pub generation: u64,
+    pub code: String,
+}
+
+impl Debug for CliAuthCodeInput {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("CliAuthCodeInput")
+            .field("provider", &self.provider)
+            .field("generation", &self.generation)
+            .field("code", &"[REDACTED]")
+            .finish()
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ListenerStatus {
     pub state: RuntimeStatus,
@@ -518,9 +610,10 @@ fn valid_base_url(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        ContextRule, ContractValidationError, InboundKind, IntegrationAuthType, IntegrationKind,
-        IntegrationUpsert, MissionKind, OneTimeSecret, ScheduledMission, TriggerMode,
-        WebhookUpsert, WeeklySchedule, WriteOnlySecret,
+        CliAuthPhase, CliAuthProvider, CliAuthView, ContextRule, ContractValidationError,
+        InboundKind, IntegrationAuthType, IntegrationKind, IntegrationUpsert, MissionKind,
+        OneTimeSecret, ScheduledMission, TriggerMode, WebhookUpsert, WeeklySchedule,
+        WriteOnlySecret,
     };
 
     #[test]
@@ -546,6 +639,27 @@ mod tests {
         assert_eq!(secret.reveal_once(), "copy-once");
         assert_eq!(format!("{secret:?}"), "OneTimeSecret([REDACTED])");
         Ok(())
+    }
+
+    #[test]
+    fn cli_auth_debug_redacts_ephemeral_uri_and_code() {
+        let view = CliAuthView {
+            provider: CliAuthProvider::Codex,
+            phase: CliAuthPhase::AwaitingUser,
+            generation: 1,
+            verification_uri: Some(String::from("https://example.test/private")),
+            user_code: Some(String::from("ABCD-EFGH")),
+            deadline_at_ms: Some(42),
+            can_cancel: true,
+            accepts_code_input: false,
+            retryable: false,
+            detail_ja: String::from("ブラウザーで続行してください"),
+        };
+
+        let debug = format!("{view:?}");
+        assert!(!debug.contains("example.test"));
+        assert!(!debug.contains("ABCD-EFGH"));
+        assert!(debug.contains("[REDACTED]"));
     }
 
     #[test]

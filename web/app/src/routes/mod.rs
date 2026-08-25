@@ -22,28 +22,30 @@ use crate::components::shell::AppShell;
 use crate::server_fns::{
     activity_tail, base_skill_assignments, base_skills_catalog, base_skills_install,
     config_bootstrap, config_change_home, config_get, config_patch, config_set_agent_token_cap,
-    config_write_provider_key, connections_add_integration_template, connections_clear_history,
-    connections_create_default_webhook, connections_decide_history, connections_domain_snapshot,
+    config_write_provider_key, connections_add_integration_template, connections_cancel_cli_auth,
+    connections_clear_history, connections_cli_auth_snapshot, connections_create_default_webhook,
+    connections_decide_history, connections_domain_snapshot, connections_poll_cli_auth,
     connections_probe_integration, connections_remove_integration, connections_remove_mission,
     connections_remove_webhook, connections_replace_missions, connections_rotate_webhook_secret,
     connections_set_context, connections_set_context_enabled, connections_set_mission_enabled,
-    connections_set_organisation, connections_start_broker, connections_start_slack,
-    connections_start_webhooks, connections_stop_broker, connections_stop_slack,
-    connections_stop_webhooks, connections_update_slack, connections_upsert_integration,
-    connections_upsert_webhook, connections_write_integration_secret,
-    connections_write_organisation_key, connections_write_slack_secret, floor_create,
-    history_query, hive_answer_question, hive_control_auto_delivery, hive_control_halt,
-    hive_control_pause, hive_control_resume, hive_control_steer, hive_create_task,
-    hive_delete_task, hive_dismiss_question, hive_move_task, hive_new_thread, hive_patch_role,
-    hive_reply, hive_set_hold, hive_snapshot, hive_stop_worker, knowledge_get, knowledge_remove,
-    knowledge_search, knowledge_upload, list_agents, memory_graph, memory_mine, memory_reflect,
-    memory_semantic_search, memory_skills_snapshot, memory_wake_up, office_close_agent,
-    office_dismiss_restore, office_dismiss_toast, office_focus, office_live_poll, office_note,
-    office_rename, office_reorder, office_restore_all, office_select, office_snapshot,
-    office_spawn, office_theme_preference, onboarding_finish, onboarding_spawn_team, pty_input,
-    pty_kill, pty_queue, pty_redraw, pty_resize, pty_restart, pty_restore, pty_spawn, reset_all,
-    save_base_skill_assignments, shutdown, skills_catalog, skills_install, skills_local,
-    skills_uninstall, telemetry_waterfall, tools_status, update_check,
+    connections_set_organisation, connections_start_broker, connections_start_cli_auth,
+    connections_start_slack, connections_start_webhooks, connections_stop_broker,
+    connections_stop_slack, connections_stop_webhooks, connections_submit_cli_auth_code,
+    connections_update_slack, connections_upsert_integration, connections_upsert_webhook,
+    connections_write_integration_secret, connections_write_organisation_key,
+    connections_write_slack_secret, floor_create, history_query, hive_answer_question,
+    hive_control_auto_delivery, hive_control_halt, hive_control_pause, hive_control_resume,
+    hive_control_steer, hive_create_task, hive_delete_task, hive_dismiss_question, hive_move_task,
+    hive_new_thread, hive_patch_role, hive_reply, hive_set_hold, hive_snapshot, hive_stop_worker,
+    knowledge_get, knowledge_remove, knowledge_search, knowledge_upload, list_agents, memory_graph,
+    memory_mine, memory_reflect, memory_semantic_search, memory_skills_snapshot, memory_wake_up,
+    office_close_agent, office_dismiss_restore, office_dismiss_toast, office_focus,
+    office_live_poll, office_note, office_rename, office_reorder, office_restore_all,
+    office_select, office_snapshot, office_spawn, office_theme_preference, onboarding_finish,
+    onboarding_spawn_team, pty_input, pty_kill, pty_queue, pty_redraw, pty_resize, pty_restart,
+    pty_restore, pty_spawn, reset_all, save_base_skill_assignments, shutdown, skills_catalog,
+    skills_install, skills_local, skills_uninstall, telemetry_waterfall, tools_status,
+    update_check,
 };
 
 const PTY_BRIDGE_JS: Asset = asset!("/src/components/domains/pty_agents/xterm_bridge.js");
@@ -694,6 +696,38 @@ fn Connections() -> Element {
     };
 
     let mut snapshot = use_resource(connections_domain_snapshot);
+    let mut cli_auth = use_resource(connections_cli_auth_snapshot);
+    let mut cli_auth_live =
+        use_signal(|| None::<md_web_contracts::domains::connections::CliAuthSnapshot>);
+    let mut cli_auth_poll =
+        use_signal(|| None::<(md_web_contracts::domains::connections::CliAuthProvider, u64)>);
+    use_effect(move || {
+        if let Some(Ok(value)) = cli_auth.read().as_ref().cloned() {
+            cli_auth_live.set(Some(value));
+        }
+    });
+    use_future(move || async move {
+        loop {
+            let active = cli_auth_poll.read().as_ref().copied();
+            if let Some((provider, generation)) = active {
+                match connections_poll_cli_auth(provider, generation).await {
+                    Ok(view) => {
+                        let terminal = !cli_auth_phase_active(view.phase);
+                        let mut current = cli_auth_live.read().clone().unwrap_or_default();
+                        upsert_cli_auth_view(&mut current, view);
+                        cli_auth_live.set(Some(current));
+                        if terminal {
+                            cli_auth_poll.set(None);
+                        }
+                    }
+                    Err(_) => cli_auth_poll.set(None),
+                }
+            }
+            let _ = document::eval("await new Promise(resolve => setTimeout(resolve, 500));")
+                .join::<serde_json::Value>()
+                .await;
+        }
+    });
     let mut one_time_secret = use_signal(|| None);
     let mut action_error = use_signal(|| None::<String>);
     let value = match snapshot.read().as_ref().cloned() {
@@ -708,12 +742,14 @@ fn Connections() -> Element {
         }
     };
     let action_snapshot = value.clone();
+    let auth_value = cli_auth_live().unwrap_or_default();
     rsx! { section { class: "route-surface",
         if let Some(error) = action_error() {
             p { role: "alert", class: "domain-error", {error} }
         }
         ConnectionsPanel {
             snapshot: value,
+            cli_auth: auth_value,
             one_time_secret: one_time_secret(),
             on_action: move |action: ConnectionUiAction| {
                 let current = action_snapshot.clone();
@@ -824,6 +860,46 @@ fn Connections() -> Element {
                             one_time_secret.set(Some(started.capability));
                         }),
                         ConnectionUiAction::StopBroker => connections_stop_broker().await.map(|_| ()),
+                        ConnectionUiAction::StartCliAuth(provider) => {
+                            match connections_start_cli_auth(provider).await {
+                                Ok(started) => {
+                                    let mut current = cli_auth_live.read().clone().unwrap_or_default();
+                                    upsert_cli_auth_view(&mut current, started.clone());
+                                    cli_auth_live.set(Some(current));
+                                    if cli_auth_phase_active(started.phase) {
+                                        cli_auth_poll.set(Some((provider, started.generation)));
+                                    }
+                                    Ok(())
+                                }
+                                Err(error) => Err(error),
+                            }
+                        }
+                        ConnectionUiAction::CancelCliAuth { provider, generation } =>
+                            connections_cancel_cli_auth(provider, generation).await.map(|view| {
+                                let mut current = cli_auth_live.read().clone().unwrap_or_default();
+                                upsert_cli_auth_view(&mut current, view);
+                                cli_auth_live.set(Some(current));
+                                cli_auth_poll.set(None);
+                            }),
+                        ConnectionUiAction::RefreshCliAuth => {
+                            cli_auth.restart();
+                            Ok(())
+                        }
+                        ConnectionUiAction::SubmitCliAuthCode { provider, generation, code } =>
+                            connections_submit_cli_auth_code(
+                                md_web_contracts::domains::connections::CliAuthCodeInput {
+                                    provider,
+                                    generation,
+                                    code,
+                                },
+                            ).await.map(|view| {
+                                let mut current = cli_auth_live.read().clone().unwrap_or_default();
+                                upsert_cli_auth_view(&mut current, view.clone());
+                                cli_auth_live.set(Some(current));
+                                if cli_auth_phase_active(view.phase) {
+                                    cli_auth_poll.set(Some((provider, view.generation)));
+                                }
+                            }),
                     };
                     action_error.set(result.err().map(|error| error.to_string()));
                     snapshot.restart();
@@ -831,6 +907,30 @@ fn Connections() -> Element {
             },
         }
     } }
+}
+
+fn cli_auth_phase_active(phase: md_web_contracts::domains::connections::CliAuthPhase) -> bool {
+    matches!(
+        phase,
+        md_web_contracts::domains::connections::CliAuthPhase::Starting
+            | md_web_contracts::domains::connections::CliAuthPhase::AwaitingUser
+            | md_web_contracts::domains::connections::CliAuthPhase::Verifying
+    )
+}
+
+fn upsert_cli_auth_view(
+    snapshot: &mut md_web_contracts::domains::connections::CliAuthSnapshot,
+    view: md_web_contracts::domains::connections::CliAuthView,
+) {
+    if let Some(existing) = snapshot
+        .providers
+        .iter_mut()
+        .find(|existing| existing.provider == view.provider)
+    {
+        *existing = view;
+    } else {
+        snapshot.providers.push(view);
+    }
 }
 
 #[component]

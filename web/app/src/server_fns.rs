@@ -199,7 +199,8 @@ pub(crate) async fn shutdown_application(from_request: bool) -> Result<(), ()> {
 
     let connections_stopped = connections_stop_slack().await.is_ok()
         & connections_stop_webhooks().await.is_ok()
-        & connections_stop_broker().await.is_ok();
+        & connections_stop_broker().await.is_ok()
+        & shutdown_provider_auth().is_ok();
     let ptys_stopped = pty::shutdown_all().await.is_ok();
     if !(connections_stopped && ptys_stopped) {
         if from_request {

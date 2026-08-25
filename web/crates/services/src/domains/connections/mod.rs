@@ -1,6 +1,7 @@
 //! Server-only state and explicitly-started transports for the connections domain.
 
 mod durable;
+mod provider_auth;
 mod runtime;
 mod scheduler;
 
@@ -20,6 +21,7 @@ use md_web_contracts::domains::connections::{
 };
 
 pub use durable::HydrationPlan;
+pub use provider_auth::{ProviderAuthRegistry, provider_auth_registry};
 pub use runtime::{
     HttpRequest, HttpResponse, InboundDispatch, InboundWork, SlackDispatch, SlackInbound,
 };
