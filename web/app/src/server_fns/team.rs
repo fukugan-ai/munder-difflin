@@ -56,24 +56,56 @@ async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnErro
         .find(|part| !part.is_empty())
         .unwrap_or("workspace")
         .to_owned();
+    let source_workspace_id = selected_source_workspace_id(receipt)?;
     let team = [
         TeamMember::aria(),
         TeamMember::implementer(),
         TeamMember::verifier(),
     ];
     for member in team {
-        let (active, _) = super::pty::list_agents().await?;
-        let already_active = active.iter().any(|agent| {
-            agent.id == member.process_id
-                && agent.name == member.display_name
-                && agent.provider == provider
-                && agent
-                    .workspace_capability
-                    .as_ref()
-                    .is_some_and(|capability| capability.path == agent.cwd)
-        });
-        if !already_active {
-            super::office::office_spawn(member.request(receipt, provider, project.clone())).await?;
+        let request = member.request(receipt, provider, project.clone());
+        let persisted = repository
+            .get_floor_agent("local", member.process_id)
+            .await
+            .map_err(|_| safe_error())?;
+        let state =
+            classify_persisted_member(persisted.as_ref(), &request.process, &source_workspace_id)?;
+        let previous_revision = persisted.as_ref().map(|value| value.revision);
+        match state {
+            PersistedMemberState::Missing => {
+                super::office::office_spawn(request).await?;
+            }
+            PersistedMemberState::Active => {}
+            PersistedMemberState::Archived => {
+                let _transition_result =
+                    super::pty::pty_unarchive(String::from(member.process_id)).await;
+                verify_transition_postcondition(
+                    &repository,
+                    member.process_id,
+                    &request.process,
+                    &source_workspace_id,
+                    previous_revision,
+                )
+                .await?;
+            }
+            PersistedMemberState::Restorable => {
+                let agent = persisted.ok_or_else(safe_error)?.agent;
+                let _transition_result = super::pty::pty_restore(
+                    md_web_contracts::domains::pty_agents::RestoreAgentRequest {
+                        agent,
+                        prefer_worktree: true,
+                    },
+                )
+                .await;
+                verify_transition_postcondition(
+                    &repository,
+                    member.process_id,
+                    &request.process,
+                    &source_workspace_id,
+                    previous_revision,
+                )
+                .await?;
+            }
         }
         // A TeamStarting retry may observe a role whose process was persisted just
         // before an earlier skill-injection failure. Re-apply the role assignment
@@ -86,7 +118,118 @@ async fn spawn_team(receipt: &FinishOnboardingResult) -> Result<(), ServerFnErro
         )
         .await?;
     }
+    super::office::office_snapshot().await?;
     Ok(())
+}
+
+#[cfg(feature = "server")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PersistedMemberState {
+    Missing,
+    Active,
+    Archived,
+    Restorable,
+}
+
+#[cfg(feature = "server")]
+fn selected_source_workspace_id(
+    receipt: &FinishOnboardingResult,
+) -> Result<md_web_contracts::domains::fs_git_ide::WorkspaceId, ServerFnError> {
+    let registry = md_web_services::domains::fs_git_ide::WorkspaceRegistry::from_source_paths(
+        receipt
+            .config
+            .registered_repos
+            .iter()
+            .map(std::path::PathBuf::from),
+    );
+    registry
+        .list()
+        .into_iter()
+        .find(|workspace| workspace.display_path == receipt.aria.cwd)
+        .map(|workspace| workspace.id)
+        .ok_or_else(safe_error)
+}
+
+#[cfg(feature = "server")]
+fn classify_persisted_member(
+    persisted: Option<&md_web_contracts::domains::persistence::PersistedFloorAgent>,
+    expected: &md_web_contracts::domains::pty_agents::SpawnAgentRequest,
+    source_workspace_id: &md_web_contracts::domains::fs_git_ide::WorkspaceId,
+) -> Result<PersistedMemberState, ServerFnError> {
+    use md_web_contracts::domains::pty_agents::AgentStatus;
+
+    let Some(persisted) = persisted else {
+        return Ok(PersistedMemberState::Missing);
+    };
+    if !persisted_member_matches(&persisted.agent, expected, source_workspace_id) {
+        return Err(ServerFnError::new(
+            "保存済みの初期チームが現在の設定と一致しません。設定を確認してください。",
+        ));
+    }
+    match persisted.agent.status {
+        AgentStatus::Archived if persisted.agent.archived => Ok(PersistedMemberState::Archived),
+        AgentStatus::Restorable => Ok(PersistedMemberState::Restorable),
+        AgentStatus::Starting
+        | AgentStatus::Idle
+        | AgentStatus::Working
+        | AgentStatus::Waiting
+        | AgentStatus::Blocked
+        | AgentStatus::Looping
+            if !persisted.agent.archived && persisted.agent.pty_id.is_some() =>
+        {
+            Ok(PersistedMemberState::Active)
+        }
+        _ => Err(ServerFnError::new(
+            "保存済みの初期チームを安全に再開できません。状態を確認してください。",
+        )),
+    }
+}
+
+#[cfg(feature = "server")]
+fn persisted_member_matches(
+    record: &md_web_contracts::domains::pty_agents::AgentRecord,
+    expected: &md_web_contracts::domains::pty_agents::SpawnAgentRequest,
+    source_workspace_id: &md_web_contracts::domains::fs_git_ide::WorkspaceId,
+) -> bool {
+    let Some(capability) = record.workspace_capability.as_ref() else {
+        return false;
+    };
+    record.id == expected.id
+        && record.name == expected.name
+        && record.provider == expected.provider
+        && record.role == expected.role
+        && record.description == expected.description
+        && record.command == expected.command
+        && record.args == expected.args
+        && record.model == expected.model
+        && capability.source_workspace_id == *source_workspace_id
+        && capability.path == record.cwd
+        && record.worktree_path.as_deref() == Some(capability.path.as_str())
+}
+
+#[cfg(feature = "server")]
+async fn verify_transition_postcondition(
+    repository: &md_web_services::domains::persistence::PgPersistenceRepository,
+    agent_id: &str,
+    expected: &md_web_contracts::domains::pty_agents::SpawnAgentRequest,
+    source_workspace_id: &md_web_contracts::domains::fs_git_ide::WorkspaceId,
+    previous_revision: Option<i64>,
+) -> Result<(), ServerFnError> {
+    let current = repository
+        .get_floor_agent("local", agent_id)
+        .await
+        .map_err(|_| safe_error())?
+        .ok_or_else(safe_error)?;
+    let is_active = classify_persisted_member(Some(&current), expected, source_workspace_id)
+        .is_ok_and(|state| state == PersistedMemberState::Active);
+    let revision_advanced = previous_revision.is_none_or(|revision| current.revision > revision);
+    if is_active && revision_advanced {
+        Ok(())
+    } else {
+        Err(ServerFnError::new(
+            "保存済みの初期チームを再開できませんでした。再試行してください。",
+        ))
+    }
 }
 
 #[cfg(feature = "server")]
@@ -264,9 +407,14 @@ fn safe_error() -> ServerFnError {
 #[cfg(all(test, feature = "server"))]
 mod tests {
     use md_web_contracts::domains::config_onboarding::{RoleSkillAssignment, TeamRole};
+    use md_web_contracts::domains::fs_git_ide::{PrivateWorkspaceCapability, WorkspaceId};
     use md_web_contracts::domains::memory_skills::{LocalSkill, SkillProvider, SkillScope};
+    use md_web_contracts::domains::persistence::PersistedFloorAgent;
+    use md_web_contracts::domains::pty_agents::{
+        AgentProvider, AgentRecord, AgentRole, AgentStatus, SpawnAgentRequest,
+    };
 
-    use super::runtime_skill_assignments;
+    use super::{PersistedMemberState, classify_persisted_member, runtime_skill_assignments};
 
     fn skill(name: &str) -> LocalSkill {
         LocalSkill {
@@ -306,5 +454,128 @@ mod tests {
                 .iter()
                 .all(|skill_id| !skill_id.contains(':'))
         }));
+    }
+
+    fn spawn_request(id: &str, name: &str, orchestrator: bool) -> SpawnAgentRequest {
+        SpawnAgentRequest {
+            id: String::from(id),
+            name: String::from(name),
+            provider: AgentProvider::Codex,
+            role: AgentRole {
+                orchestrator,
+                assistant: !orchestrator,
+            },
+            description: format!("{name} description"),
+            cwd: String::from("/source/repository"),
+            command: String::from("codex"),
+            args: Vec::new(),
+            model: Some(String::from("gpt-5.6-codex")),
+            cols: 100,
+            rows: 30,
+            isolate: true,
+            resume: false,
+            require_resume: false,
+            resume_session_id: None,
+        }
+    }
+
+    fn persisted(
+        request: &SpawnAgentRequest,
+        revision: i64,
+        status: AgentStatus,
+    ) -> PersistedFloorAgent {
+        let capability_id = format!("wt-{}", request.id);
+        let private_path = format!("/harness/workspaces/{capability_id}");
+        PersistedFloorAgent {
+            floor_id: String::from("local"),
+            revision,
+            agent: AgentRecord {
+                id: request.id.clone(),
+                name: request.name.clone(),
+                provider: request.provider,
+                role: request.role,
+                description: request.description.clone(),
+                cwd: private_path.clone(),
+                command: request.command.clone(),
+                args: request.args.clone(),
+                model: request.model.clone(),
+                status,
+                action_ja: String::from("待機中"),
+                pty_id: (!matches!(status, AgentStatus::Archived | AgentStatus::Restorable))
+                    .then(|| format!("pty-{}", request.id)),
+                worktree_path: Some(private_path.clone()),
+                workspace_capability: Some(PrivateWorkspaceCapability {
+                    id: capability_id.clone(),
+                    workspace_id: WorkspaceId(format!("private-{capability_id}")),
+                    source_workspace_id: WorkspaceId(String::from("source-1")),
+                    path: private_path,
+                }),
+                session_id: None,
+                archived: status == AgentStatus::Archived,
+            },
+            updated_at_ms: 0,
+        }
+    }
+
+    #[test]
+    fn partial_archived_team_recovery_plan_is_idempotent() {
+        let source = WorkspaceId(String::from("source-1"));
+        let requests = [
+            spawn_request("god", "Aria", true),
+            spawn_request("implementer", "Implementer", false),
+            spawn_request("verifier", "Verifier", false),
+        ];
+        let partial = [
+            Some(persisted(&requests[0], 2, AgentStatus::Archived)),
+            Some(persisted(&requests[1], 2, AgentStatus::Archived)),
+            None,
+        ];
+
+        let initial = requests
+            .iter()
+            .zip(&partial)
+            .map(|(request, record)| classify_persisted_member(record.as_ref(), request, &source))
+            .collect::<Result<Vec<_>, _>>();
+
+        assert_eq!(
+            initial.ok(),
+            Some(vec![
+                PersistedMemberState::Archived,
+                PersistedMemberState::Archived,
+                PersistedMemberState::Missing,
+            ])
+        );
+
+        let completed = [
+            persisted(&requests[0], 3, AgentStatus::Idle),
+            persisted(&requests[1], 3, AgentStatus::Idle),
+            persisted(&requests[2], 1, AgentStatus::Idle),
+        ];
+        let duplicate_retry = requests
+            .iter()
+            .zip(&completed)
+            .map(|(request, record)| classify_persisted_member(Some(record), request, &source))
+            .collect::<Result<Vec<_>, _>>();
+
+        assert_eq!(
+            duplicate_retry.ok(),
+            Some(vec![PersistedMemberState::Active; 3])
+        );
+        assert_eq!(completed.map(|record| record.revision), [3, 3, 1]);
+    }
+
+    #[test]
+    fn archived_member_with_wrong_source_capability_is_rejected() {
+        let request = spawn_request("god", "Aria", true);
+        let record = persisted(&request, 2, AgentStatus::Archived);
+
+        assert!(
+            classify_persisted_member(
+                Some(&record),
+                &request,
+                &WorkspaceId(String::from("source-2"))
+            )
+            .is_err()
+        );
     }
 }
